@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">{{ titulo }}</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST" enctype="{{ enctype }}">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {% if field.name == 'imagem' and item.imagem %}
+                        <div class="mb-2">
+                           <small>Imagem Atual:</small><br>
+                           <img src="{{ item.imagem.url }}" alt="Imagem atual" height="80" class="rounded">
+                        </div>
+                    {% endif %}
+                    {{ field }}
+                    {% for error in field.errors %} <div class="invalid-feedback d-block">{{ error }}</div> {% endfor %}
+                    {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text|safe }}</small>{% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-success">Salvar Item</button>
+            <a href="{% url 'gerenciar_cardapio' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

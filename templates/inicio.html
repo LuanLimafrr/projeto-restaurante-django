@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<header class="hero-section hero-inicio text-center py-5 mb-5">
+    <div class="container hero-container">
+        <h1 class="display-3 fw-bold hero-title">Chama do Cerrado</h1>
+        <p class="lead hero-subtitle">Onde a tradição encontra o sabor da brasa.</p>
+        
+        {% if user.is_authenticated and not user.is_staff %}
+            <p class="mt-3 hero-login-prompt">
+                <small>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalFila" class="text-warning fw-bold">Clique aqui</a> para entrar na fila, ou 
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalReserva" class="text-warning fw-bold">faça sua reserva</a>.
+                </small>
+            </p>
+
+        {% elif not user.is_authenticated %}
+            <p class="mt-3 hero-login-prompt">
+                <small>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalFila" class="text-warning fw-bold">Clique aqui</a> para entrar na fila.
+                </small>
+            </p>
+             <p class="mt-2 hero-login-prompt">
+                <small>
+                    Para fazer reservas, <a href="{% url 'login' %}?next={% url 'fazer_reserva' %}" class="text-warning fw-bold">faça login</a> ou 
+                    <a href="{% url 'registrar' %}" class="text-warning fw-bold">cadastre-se</a>.
+                </small>
+            </p>
+        {% endif %}
+        </div>
+</header>
+
+<section id="novidades" class="content-section py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Novidades e Promoções</h2>
+        <div id="carrosselPromocoes" class="carousel slide carousel-fade" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#carrosselPromocoes" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                <button type="button" data-bs-target="#carrosselPromocoes" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                <button type="button" data-bs-target="#carrosselPromocoes" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            </div>
+            <div class="carousel-inner" style="border-radius: 0.375rem; box-shadow: 0 6px 12px rgba(0,0,0,0.3);">
+                <div class="carousel-item active" data-bs-interval="5000">
+                    <img src="{% static 'img/ribeye_chama_cerrado.png' %}" class="d-block w-100 carrossel-img" alt="Promoção Ribeye">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>Quinta do Ribeye</h5>
+                        <p>Toda quinta, nosso Ribeye especial com 20% de desconto.</p>
+                    </div>
+                </div>
+                <div class="carousel-item" data-bs-interval="5000">
+                    <img src="{% static 'img/ambiente_chama_cerrado.png' %}" class="d-block w-100 carrossel-img" alt="Música ao Vivo">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>Música ao Vivo</h5>
+                        <p>Aprecie o melhor do Jazz e Blues toda sexta-feira à noite.</p>
+                    </div>
+                </div>
+                <div class="carousel-item" data-bs-interval="5000">
+                    <img src="{% static 'img/costelinha_chama_cerrado.png' %}" class="d-block w-100 carrossel-img" alt="Festival da Costelinha">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>Festival da Costelinha</h5>
+                        <p>Este mês, nossa famosa costelinha com molhos especiais.</p>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carrosselPromocoes" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carrosselPromocoes" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+        </div>
+    </div>
+</section>
+
+<section id="sobre" class="content-section py-5" style="background-color: var(--cliente-card-bg);">
+    <div class="container">
+        <h2 class="text-center mb-5">Nossa História e Atmosfera</h2>
+        <div class="row align-items-center">
+            <div class="col-md-6"><img src="{% static 'img/ambiente_chama_cerrado.png' %}" class="img-fluid rounded shadow-sm" alt="Ambiente Interno"></div>
+            <div class="col-md-6 mt-4 mt-md-0">
+                <h3>A Experiência Chama do Cerrado</h3>
+                <p>Fundado por amantes da boa carne...</p> <p>Nossa ambientação remete...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="cardapio" class="content-section py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Nossos Destaques do Cardápio</h2>
+        <div class="row g-4">
+            {% for item in itens_destaque %}
+            <div class="col-md-6 col-lg-4"><div class="card card-custom h-100">
+                    {% if item.imagem %}<img src="{{ item.imagem.url }}" class="card-img-top" alt="{{ item.nome }}" style="height: 250px; object-fit: cover;">
+                    {% else %}<img src="{% static 'img/placeholder.png' %}" class="card-img-top" alt="Imagem indisponível" style="height: 250px; object-fit: cover;">{% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ item.nome }}</h5><p class="card-text">{{ item.descricao|truncatewords:10 }}</p>
+                        <h5 class="mt-auto" style="color: var(--cliente-destaque, #d4af37);">R$ {{ item.preco|stringformat:".2f" }}</h5>
+                    </div></div></div>
+            {% empty %}<p class="text-muted">Nenhum destaque cadastrado.</p>{% endfor %}
+        </div>
+        <div class="text-center mt-4"><a href="{% url 'cardapio' %}" class="btn btn-primary">Ver Cardápio Completo</a></div>
+    </div>
+</section>
+
+<div class="modal fade" id="modalFila" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Entrar na Fila</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" action="{% url 'entrar_na_fila_modal' %}">{% csrf_token %}{% for field in fila_form %}<div class="mb-3"><label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}<button type="submit" class="btn btn-success w-100">Confirmar</button></form></div></div></div></div>
+<div class="modal fade" id="modalReserva" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Solicitar Reserva</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" action="{% url 'fazer_reserva_modal' %}">{% csrf_token %}{% for field in reserva_form %}<div class="mb-3"><label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}<button type="submit" class="btn btn-warning w-100">Enviar Solicitação</button></form></div></div></div></div>
+{% endblock %}
+
+
+{% block scripts %}
+    {{ block.super }} 
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Lógica para reabrir modal em caso de erro de formulário
+            const urlParams = new URLSearchParams(window.location.search); const openModal = urlParams.get('openModal');
+            let modalToOpen = null;
+            if (openModal === 'fila') { modalToOpen = document.getElementById('modalFila'); }
+            else if (openModal === 'reserva') { modalToOpen = document.getElementById('modalReserva'); }
+            
+            const errorMessages = document.querySelectorAll('.alert.alert-danger');
+            let shouldOpenFilaOnError = false; let shouldOpenReservaOnError = false;
+            errorMessages.forEach(alert => { 
+                if (alert.textContent.includes('Erro ao entrar na fila')) { shouldOpenFilaOnError = true; } 
+                if (alert.textContent.includes('Erro na reserva') || alert.textContent.includes('horário lotado')) { shouldOpenReservaOnError = true; }
+            });
+
+            if (shouldOpenFilaOnError) { modalToOpen = document.getElementById('modalFila'); }
+            else if (shouldOpenReservaOnError) { modalToOpen = document.getElementById('modalReserva'); }
+
+            if (modalToOpen && typeof bootstrap !== 'undefined') { var myModal = new bootstrap.Modal(modalToOpen); myModal.show(); }
+        });
+    </script>
+{% endblock %}

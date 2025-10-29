@@ -1,0 +1,53 @@
+{% extends "staff_base.html" %}
+{% load static %}
+
+{% block title %}Gerenciar Fila de Espera{% endblock %}
+
+{% block main_content %} {# <-- Mudou de content para main_content #}
+<h2 class="mb-4">Gerenciamento Completo da Fila</h2>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Clientes Aguardando</h5>
+                {% if proximo_cliente %}
+                    <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ proximo_cliente.id }}" class="btn btn-success">Chamar Próximo Cliente</a>
+                {% else %}
+                    <span class="text-muted">Fila Vazia</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if clientes_aguardando %}
+                <ul class="list-group list-group-flush">
+                    {% for cliente in clientes_aguardando %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><strong>{{ forloop.counter }}º - {{ cliente.nome }}</strong> ({{ cliente.quantidade }}p)<small class="d-block text-muted">Chegou: {{ cliente.timestamp_entrada|date:"H:i" }}</small></div>
+                        <div>
+                            <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ cliente.id }}" class="btn btn-sm btn-primary me-1" title="Alocar">Alocar</a>
+                            <a href="{% url 'marcar_como_desistente' cliente.id %}" class="btn btn-sm btn-warning me-1" title="Desistente">Desistir</a>
+                            <a href="{% url 'remover_cliente' cliente.id %}" class="btn btn-sm btn-outline-danger" title="Remover">&times;</a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %} <p class="card-text text-muted text-center py-3">Nenhum cliente aguardando.</p> {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header"><h5 class="mb-0">Próximo na Fila</h5></div>
+            <div class="card-body text-center">
+                {% if proximo_cliente %}
+                    <h4 class="card-title">{{ proximo_cliente.nome }}</h4>
+                    <p class="card-text">{{ proximo_cliente.quantidade }} pessoas</p>
+                    <p class="text-muted">Chegou: {{ proximo_cliente.timestamp_entrada|date:"H:i" }}</p>
+                    <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ proximo_cliente.id }}" class="btn btn-lg btn-success mt-2">Alocar Agora</a>
+                {% else %}
+                    <p class="card-text text-muted">Ninguém na fila.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
