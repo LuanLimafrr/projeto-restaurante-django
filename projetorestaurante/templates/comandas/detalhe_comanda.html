@@ -1,0 +1,93 @@
+{% extends "staff_base.html" %}
+{% load static %}{% load i18n %}
+
+{% block title %}Comanda - Mesa {{ mesa.numero }}{% endblock %}
+
+{% block main_content %}
+{% if messages %} {% for message in messages %} <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> {% endfor %} {% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <h2 class="mb-4"> Comanda: Mesa {{ mesa.numero }} {% if comanda %} <span class="badge bg-secondary">{{ comanda.get_status_display }}</span> {% endif %} </h2>
+        <div class="card shadow-sm">
+            <div class="card-header"><h5 class="mb-0">Itens Consumidos</h5></div>
+            <div class="card-body"><table class="table align-middle">
+                <thead><tr><th>Item</th><th class="text-center">Qtd.</th><th class="text-end">Preço Unit.</th><th class="text-end">Total</th>{% if comanda.status == 'ABERTA' %} <th class="text-center">Ações</th> {% endif %}</tr></thead>
+                <tbody>
+                    {% for item in itens_da_comanda %}
+                    <tr>
+                        <td> {{ item.item_cardapio.nome }} {% if item.observacao %} <small class="d-block text-muted"><em>Obs: {{ item.observacao }}</em></small> {% endif %} </td>
+                        <td class="text-center">
+                            {% if comanda.status == 'ABERTA' %}
+                            <div class="input-group input-group-sm justify-content-center">
+                                <a href="{% url 'diminuir_quantidade_item' item.id %}" class="btn btn-outline-secondary">-</a>
+                                <span class="input-group-text" style="min-width: 40px;">{{ item.quantidade }}</span>
+                                <a href="{% url 'aumentar_quantidade_item' item.id %}" class="btn btn-outline-secondary">+</a>
+                            </div>
+                            {% else %} {{ item.quantidade }} {% endif %}
+                        </td>
+                        <td class="text-end">R$ {{ item.preco_unitario_momento|stringformat:".2f" }}</td>
+                        <td class="text-end">R$ {{ item.get_total_item|stringformat:".2f" }}</td>
+                        {% if comanda.status == 'ABERTA' %}
+                        <td class="text-center"><a href="{% url 'remover_item_comanda' item.id %}" class="btn btn-sm btn-outline-danger" title="Remover">&times;</a></td>
+                        {% endif %}
+                    </tr>
+                    {% empty %} <tr> <td colspan="5" class="text-center text-muted">Nenhum item adicionado.</td> </tr>
+                    {% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+        {% if comanda.status == 'ABERTA' %}
+        <div class="card shadow-sm mt-4"><div class="card-body">
+            <h5 class="card-title">Adicionar Novo Item</h5>
+            <form method="POST"> {% csrf_token %}
+                <div class="row g-2 align-items-start">
+                    <div class="col-md-6"><label class="form-label">{{ form.item_cardapio.label }}</label>{{ form.item_cardapio }}</div>
+                    <div class="col-md-2"><label class="form-label">{{ form.quantidade.label }}</label>{{ form.quantidade }}</div>
+                    <div class="col-md-4"><label class="form-label">{{ form.observacao.label }}</label>{{ form.observacao }}</div>
+                </div>
+                 <div class="mt-2 text-end"><button type="submit" class="btn btn-primary">Adicionar Item</button></div>
+            </form>
+        </div></div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 70px;">
+            <div class="card-body">
+                <h5 class="card-title mb-4">Resumo da Conta</h5>
+
+                {% if comanda %}
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">Subtotal<span>R$ {{ comanda.get_subtotal|stringformat:".2f" }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Taxa (10%)<span>R$ {{ comanda.get_taxa_servico|stringformat:".2f" }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between bg-light"><strong>TOTAL</strong><strong>R$ {{ comanda.get_total|stringformat:".2f" }}</strong></li>
+                    </ul><hr>
+                    <p><strong>Taxa incluída?</strong>
+                        {% if comanda.status == 'ABERTA' %}
+                            {% if comanda.incluir_taxa_servico %} <a href="{% url 'toggle_taxa_servico' comanda.id %}" class="badge bg-success text-decoration-none">SIM</a>
+                            {% else %} <a href="{% url 'toggle_taxa_servico' comanda.id %}" class="badge bg-danger text-decoration-none">NÃO</a> {% endif %}
+                        {% else %}
+                            {% if comanda.incluir_taxa_servico %} <span class="badge bg-success">SIM</span>
+                            {% else %} <span class="badge bg-danger">NÃO</span> {% endif %}
+                        {% endif %}
+                    </p>
+                    <div class="d-grid gap-2 mt-4">
+                        {% if comanda.status == 'ABERTA' %} 
+                            <a href="{% url 'fechar_comanda' comanda.id %}" class="btn btn-danger btn-lg">Pedir Conta</a>
+                        {% elif comanda.status == 'FECHADA' %} 
+                            <a href="{% url 'fechar_comanda' comanda.id %}" class="btn btn-info btn-lg">Ver Nota Fiscal</a>
+                        {% else %} 
+                            <a href="#" class="btn btn-secondary btn-lg disabled">Conta Paga</a> 
+                        {% endif %}
+                        <a href="{% url 'mapa_mesas' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar ao Mapa</a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Esta mesa não possui comanda ativa.</p>
+                    <a href="{% url 'mapa_mesas' %}" class="btn btn-secondary w-100"><i class="bi bi-arrow-left"></i> Voltar ao Mapa</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

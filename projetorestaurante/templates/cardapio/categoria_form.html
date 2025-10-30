@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">{{ titulo }}</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="{{ form.nome.id_for_label }}" class="form-label">{{ form.nome.label }}</label>
+                {{ form.nome }}
+                {% for error in form.nome.errors %} <div class="invalid-feedback d-block">{{ error }}</div> {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-success">Salvar Categoria</button>
+            <a href="{% url 'gerenciar_cardapio' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

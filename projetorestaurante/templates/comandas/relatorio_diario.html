@@ -1,0 +1,57 @@
+{% extends "staff_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}Relatório de Vendas{% endblock %}
+
+{% block main_content %} {# <-- Mudou de content para main_content #}
+<div class="mb-4 d-flex justify-content-center flex-wrap gap-2">
+    <a href="{% url 'relatorio_diario' %}?periodo=hoje" class="btn {% if periodo_selecionado == 'hoje' %}btn-primary{% else %}btn-outline-primary{% endif %}">Hoje</a>
+    <a href="{% url 'relatorio_diario' %}?periodo=semana" class="btn {% if periodo_selecionado == 'semana' %}btn-primary{% else %}btn-outline-primary{% endif %}">Semana</a>
+    <a href="{% url 'relatorio_diario' %}?periodo=mes" class="btn {% if periodo_selecionado == 'mes' %}btn-primary{% else %}btn-outline-primary{% endif %}">Mês</a>
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDate">Data Específica</button>
+</div>
+<div class="collapse {% if periodo_selecionado == 'custom' %}show{% endif %}" id="collapseDate">
+    <div class="card card-body mb-4 shadow-sm">
+        <form method="GET" action="{% url 'relatorio_diario' %}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="id_data" class="form-label">Selecionar Data:</label>
+                <input type="date" name="data" id="id_data" class="form-control" value="{{ data_inicio|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-4"><button type="submit" class="btn btn-primary">Ver Relatório</button></div>
+        </form>
+    </div>
+</div>
+<h2 class="mb-4">{{ titulo_relatorio }}</h2>
+<div class="row mb-4">
+    <div class="col-md-6"><div class="card text-center shadow-sm"><div class="card-body">
+        <h5 class="card-title text-muted">Comandas Pagas</h5>
+        <p class="display-4 fw-bold">{{ numero_comandas }}</p>
+    </div></div></div>
+    <div class="col-md-6"><div class="card text-center shadow-sm"><div class="card-body">
+        <h5 class="card-title text-muted">Valor Total Vendido</h5>
+        <p class="display-4 fw-bold">R$ {{ valor_total|stringformat:".2f" }}</p>
+    </div></div></div>
+</div>
+<div class="card shadow-sm mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Detalhe das Comandas Pagas</h5>
+         {% if periodo_selecionado != 'hoje' and periodo_selecionado != 'custom' %}<small class="text-muted">Período: {{ data_inicio|date:"d/m/Y" }} a {{ data_fim|date:"d/m/Y" }}</small>{% endif %}
+    </div>
+    <div class="card-body">
+        <table class="table table-striped table-hover mb-0 align-middle">
+            <thead><tr><th>Mesa</th><th>Data</th><th>Hora</th><th class="text-end">Total</th><th>Itens</th></tr></thead>
+            <tbody>
+                {% for comanda in comandas_do_periodo %}
+                <tr>
+                    <td>{{ comanda.mesa.numero }}</td><td>{{ comanda.timestamp_fechamento|date:"d/m/Y" }}</td><td>{{ comanda.timestamp_fechamento|date:"H:i" }}</td>
+                    <td class="text-end">R$ {{ comanda.get_total|stringformat:".2f" }}</td>
+                    <td><ul class="list-unstyled mb-0 small">{% for item in comanda.itens.all %}<li>{{ item.quantidade }}x {{ item.item_cardapio.nome }} {% if item.observacao %}({{ item.observacao }}){% endif %}</li>{% endfor %}</ul></td>
+                </tr>
+                {% empty %} <tr> <td colspan="5" class="text-center text-muted py-4">Nenhuma comanda paga neste período.</td> </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %} {% block title %}Meu Perfil{% endblock %}
+
+{% block content %} {# Início do bloco de conteúdo #}
+<h2 class="mb-4">Meu Perfil</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title">Bem-vindo(a), {{ user.first_name|default:user.username }}!</h5>
+        <ul class="list-group list-group-flush mt-3">
+            <li class="list-group-item"><strong>Usuário:</strong> {{ user.username }}</li>
+            <li class="list-group-item"><strong>Nome:</strong> {{ user.get_full_name }}</li>
+            <li class="list-group-item"><strong>Email:</strong> {{ user.email }}</li>
+        </ul>
+        <hr>
+        <p><em>(Em breve: Histórico de reservas e pedidos)</em></p>
+        <form action="{% url 'logout' %}" method="post" class="d-inline"> {# Nome correto 'logout' #}
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">Sair (Logout)</button>
+        </form>
+    </div>
+</div>
+{% endblock %} {# Fim do bloco de conteúdo #}
