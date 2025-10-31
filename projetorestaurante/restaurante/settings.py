@@ -32,11 +32,12 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # settings.py
 
 ALLOWED_HOSTS = [
-    '.onrender.com',           # Permite qualquer subdomínio do Render
-    'restaurante-zyuu.onrender.com', # Sua URL específica
-    '127.0.0.1',               # Para desenvolvimento local
+    'projeto-restaurante-zyuu.onrender.com', # O subdomínio padrão do Render
+    'chamadoserrado.online',
+    'www.chamadoserrado.online',
+    'localhost', # Para desenvolvimento local, se quiser
+    '127.0.0.1' # Para desenvolvimento local, se quiser
 ]
-
 
 # Application definition
 
