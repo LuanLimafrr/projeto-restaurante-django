@@ -7,37 +7,21 @@ from .models import Reserva
 from .forms import ReservaForm
 from django.utils import timezone
 from django.conf import settings
-# from django.core.mail import send_mail  <-- REMOVIDO (Não usamos mais)
-# from django.template.loader import render_to_string <-- REMOVIDO
+import requests
+import os
 from django.contrib.auth.models import User
 from cardapio.views import is_staff_user # Assumindo que sua função 'is_staff' está aqui
 
-# --- NOVAS IMPORTAÇÕES ---
-import requests
-import os
-# --- FIM DAS NOVAS IMPORTAÇÕES ---
-
-
-# Função para checar se é staff (você já deve ter uma parecida)
-# SE a função 'is_staff_user' (importada de cardapio.views) NÃO funcionar,
-# descomente a linha abaixo para definir 'is_staff' localmente.
-# def is_staff(user):
-#    return user.is_staff
-
 # --- FUNÇÃO DE EMAIL REESCRITA PARA USAR A API WEB DO SENDGRID ---
 def enviar_email_status_reserva(request, reserva):
-    # Vamos ler a API Key e o email de remetente das variáveis de ambiente
-    # que JÁ configuramos no Render
     api_key = os.environ.get('EMAIL_HOST_PASSWORD')
     from_email = os.environ.get('DEFAULT_FROM_EMAIL')
 
     if not api_key or not from_email:
-        # Se as variáveis não estiverem configuradas, apenas loga o erro no console
         print("ERRO DE DEPLOY: API Key do SendGrid ou E-mail de Remetente não configurado.")
-        # Adiciona uma mensagem para o staff, mas não para o usuário
         if request.user.is_staff:
             messages.warning(request, "Configuração de e-mail incompleta no servidor.")
-        return # Sai da função sem travar
+        return
 
     status_map = {
         'CONFIRMADA': 'Confirmada',
@@ -47,7 +31,6 @@ def enviar_email_status_reserva(request, reserva):
     status_amigavel = status_map.get(reserva.status, reserva.status)
     assunto = f"Sua reserva no Chama do Cerrado foi {status_amigavel}!"
     
-    # Mensagem em HTML (mais bonito)
     nome_usuario = reserva.usuario.get_full_name() or reserva.usuario.username
     mensagem_html = f"""
     <html>
@@ -65,7 +48,6 @@ def enviar_email_status_reserva(request, reserva):
     </html>
     """
     
-    # Payload da API SendGrid v3
     data = {
         "personalizations": [{
             "to": [{"email": reserva.usuario.email}],
@@ -83,23 +65,17 @@ def enviar_email_status_reserva(request, reserva):
         'Content-Type': 'application/json'
     }
 
-    # Tenta enviar o e-mail via API
     try:
-        # IMPORTANTE: Definir um timeout de 10s (o Gunicorn é 30s)
         response = requests.post('https://api.sendgrid.com/v3/mail/send', headers=headers, json=data, timeout=10)
         
-        # Verifica se a API do SendGrid aceitou
-        if response.status_code == 202: # 202 Accepted é o sucesso do SendGrid
-            # Não precisamos de mensagem de sucesso aqui, a view principal já faz isso.
+        if response.status_code == 202:
             print(f"E-mail de {status_amigavel} enviado para {reserva.usuario.email}.")
         else:
-            # Se o SendGrid der erro, informa o admin e loga o erro
             print(f"Erro ao enviar email via SendGrid API: {response.status_code} - {response.text}")
             if request.user.is_staff:
                 messages.warning(request, f"Reserva salva, mas houve um erro ao enviar o e-mail (API SendGrid: {response.status_code}).")
     
     except requests.exceptions.RequestException as e:
-        # Se houver um erro de rede (como timeout da nossa requisição)
         print(f"Erro de rede ao conectar com SendGrid API: {e}")
         if request.user.is_staff:
             messages.warning(request, "Reserva salva, mas o serviço de e-mail demorou a responder.")
@@ -113,17 +89,15 @@ def fazer_reserva(request):
         if form.is_valid():
             reserva = form.save(commit=False)
             reserva.usuario = request.user
-            reserva.status = 'PENDENTE' # Ou outro status inicial
+            reserva.status = 'PENDENTE'
             reserva.save()
             messages.success(request, 'Sua reserva foi criada com sucesso! Aguardando confirmação.')
-            # enviar_email_status_reserva(request, reserva) # Descomente se quiser enviar e-mail de "Pendente"
-            return redirect('historico_reservas') # Redireciona para o histórico
+            # AQUI: Redireciona para o histórico de reservas do CLIENTE
+            return redirect('historico_reservas')
         else:
             messages.error(request, 'Erro ao criar a reserva. Por favor, verifique os dados.')
     else:
         form = ReservaForm()
-    
-    # Renderiza o template 'reservas/fazer_reserva.html'
     return render(request, 'reservas/fazer_reserva.html', {'form': form})
 
 # --- VIEW FAZER RESERVA (MODAL) ---
@@ -137,74 +111,63 @@ def fazer_reserva_modal(request):
             reserva.status = 'PENDENTE'
             reserva.save()
             messages.success(request, 'Sua reserva foi criada com sucesso (via modal)!')
-            # enviar_email_status_reserva(request, reserva) # Descomente se quiser enviar e-mail de "Pendente"
-            return redirect('historico_reservas') # Redireciona para o histórico
+            # AQUI: Redireciona para o histórico de reservas do CLIENTE
+            return redirect('historico_reservas')
         else:
             messages.error(request, 'Erro ao criar a reserva via modal. Por favor, verifique os dados.')
-            form = ReservaForm(request.POST) # Re-instancia o form para mostrar erros
+            form = ReservaForm(request.POST)
     else:
         form = ReservaForm()
-    
-    # Renderiza o template 'reservas/fazer_reserva_modal.html' (ou o que você usar)
-    # AJUSTADO: Se você tem fazer_reserva_modal.html, mantenha, senão ajuste.
-    # Assumi que 'fazer_reserva_modal.html' realmente existe como arquivo separado.
     return render(request, 'reservas/fazer_reserva_modal.html', {'form': form})
 
-# --- VIEW HISTÓRICO DE RESERVAS (PARA O USUÁRIO) ---
+# --- VIEW HISTÓRICO DE RESERVAS (PARA O CLIENTE) ---
 @login_required
 def historico_reservas(request):
     reservas = Reserva.objects.filter(usuario=request.user).order_by('-data', '-hora')
-    # AJUSTADO AQUI: O template é 'reservas/historico.html', não 'reservas/historico_reservas.html'
+    # AJUSTADO: Usa o nome do arquivo correto `historico.html`
     return render(request, 'reservas/historico.html', {'reservas': reservas})
 
-# --- VIEW GERENCIAR RESERVAS (PARA O STAFF) ---
+# --- VIEW GERENCIAR RESERVAS (PARA O STAFF - ATUAIS/PENDENTES) ---
 @login_required
-@user_passes_test(is_staff_user) # Usa a função de staff importada
+@user_passes_test(is_staff_user)
 def gerenciar_reservas(request):
-    # Pegando todas as reservas e separando por status
     reservas_pendentes = Reserva.objects.filter(status='PENDENTE').order_by('data', 'hora')
-    # Mostra confirmadas de hoje em diante
     reservas_confirmadas = Reserva.objects.filter(status='CONFIRMADA', data__gte=timezone.now().date()).order_by('data', 'hora')
     
     context = {
         'reservas_pendentes': reservas_pendentes,
         'reservas_confirmadas': reservas_confirmadas,
     }
-    # AJUSTADO AQUI: O template é 'reservas/gerenciar.html', não 'reservas/gerenciar_reservas.html'
+    # AJUSTADO: Usa o nome do arquivo correto `gerenciar.html`
     return render(request, 'reservas/gerenciar.html', context)
+
+# --- NOVA VIEW HISTÓRICO GERAL DE RESERVAS (PARA O STAFF) ---
+@login_required
+@user_passes_test(is_staff_user)
+def historico_geral_reservas_staff(request):
+    # Para o staff, mostra todas as reservas, incluindo canceladas e passadas.
+    reservas = Reserva.objects.all().order_by('-data', '-hora')
+    return render(request, 'reservas/historico_geral_staff.html', {'reservas': reservas})
+
 
 # --- VIEW CONFIRMAR RESERVA (PARA O STAFF) ---
 @login_required
-@user_passes_test(is_staff_user) # Usa a função de staff importada
-def confirmar_reserva(request, id): # O urls.py usa 'id', não 'reserva_id'
+@user_passes_test(is_staff_user)
+def confirmar_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
-    
-    # Verifica se a ação é via POST (mais seguro)
-    # Se o seu botão for um link GET, mude 'if request.method == "POST":' para 'if True:'
-    # if request.method == 'POST': 
     reserva.status = 'CONFIRMADA'
     reserva.save()
     messages.success(request, f"Reserva de {reserva.usuario.get_full_name()} confirmada!")
-    
-    # Chama a nova função de e-mail (que não trava mais)
     enviar_email_status_reserva(request, reserva) 
-    
     return redirect('gerenciar_reservas')
-    # return redirect('gerenciar_reservas') # Se for GET, só precisa redirecionar
 
 # --- VIEW CANCELAR RESERVA (PARA O STAFF) ---
 @login_required
-@user_passes_test(is_staff_user) # Usa a função de staff importada
-def cancelar_reserva(request, id): # O urls.py usa 'id', não 'reserva_id'
+@user_passes_test(is_staff_user)
+def cancelar_reserva(request, id):
     reserva = get_object_or_404(Reserva, id=id)
-    
-    # if request.method == 'POST':
     reserva.status = 'CANCELADA'
     reserva.save()
     messages.warning(request, f"Reserva de {reserva.usuario.get_full_name()} foi cancelada.")
-    
-    # Chama a nova função de e-mail (que não trava mais)
     enviar_email_status_reserva(request, reserva) 
-    
     return redirect('gerenciar_reservas')
-    # return redirect('gerenciar_reservas')

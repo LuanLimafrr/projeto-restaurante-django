@@ -6,9 +6,10 @@
 {% block main_content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h4 mb-0">Gerenciar Reservas</h2>
+        <h2 class="h4 mb-0">Gerenciar Reservas (Ativas/Pendentes)</h2>
         <div>
-            <a href="{% url 'historico_reservas_staff' %}" class="btn btn-outline-info">VER HISTÓRICO/CANCELADAS</a>
+            {# AQUI: Link agora aponta para a nova view de histórico geral do staff #}
+            <a href="{% url 'historico_geral_reservas_staff' %}" class="btn btn-outline-info">VER HISTÓRICO GERAL</a>
         </div>
     </div>
 
@@ -40,6 +41,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Cliente</th>
+                                                <th>Data</th>
                                                 <th>Hora</th>
                                                 <th>Pessoas</th>
                                                 <th>Status</th>
@@ -50,6 +52,7 @@
                                             {% for reserva in reservas_confirmadas %}
                                                 <tr>
                                                     <td>{{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</td>
+                                                    <td>{{ reserva.data|date:"d/m/Y" }}</td>
                                                     <td>{{ reserva.hora|time:"H:i" }}</td>
                                                     <td>{{ reserva.numero_pessoas }}</td>
                                                     <td><span class="badge bg-success">{{ reserva.get_status_display }}</span></td>
@@ -73,6 +76,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Cliente</th>
+                                                <th>Data</th>
                                                 <th>Hora</th>
                                                 <th>Pessoas</th>
                                                 <th>Status</th>
@@ -83,6 +87,7 @@
                                             {% for reserva in reservas_pendentes %}
                                                 <tr>
                                                     <td>{{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</td>
+                                                    <td>{{ reserva.data|date:"d/m/Y" }}</td>
                                                     <td>{{ reserva.hora|time:"H:i" }}</td>
                                                     <td>{{ reserva.numero_pessoas }}</td>
                                                     <td><span class="badge bg-warning text-dark">{{ reserva.get_status_display }}</span></td>
