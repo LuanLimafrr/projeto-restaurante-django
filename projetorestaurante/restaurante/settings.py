@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -146,6 +147,8 @@ STATICFILES_DIRS = [
 
 # STATIC_ROOT deve estar definido para que o código do urls.py funcione, mesmo que vazio por enquanto.
 STATIC_ROOT = BASE_DIR / 'staticfiles_coletados'
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Configuração de arquivos de Mídia (uploads dos usuários)
 MEDIA_URL = '/media/'
