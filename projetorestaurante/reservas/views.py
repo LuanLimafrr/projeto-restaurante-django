@@ -12,7 +12,7 @@ from django.db.models import Sum
 from django.utils import timezone
 import datetime
 from datetime import timedelta # Garanta que timedelta está importado
-from utils.emails import send_email_with_sendgrid_api
+from restaurante.utils.emails import send_email_with_sendgrid_api
 
 # --- HELPER PARA ENVIAR EMAIL (sem mudanças) ---
 def enviar_email_status_reserva(request, reserva):
