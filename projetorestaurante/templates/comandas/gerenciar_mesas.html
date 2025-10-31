@@ -30,11 +30,7 @@
                             <label for="{{ form.numero.id_for_label }}" class="form-label">Número da Mesa</label>
                             {{ form.numero }}
                         </div>
-                        <div class="mb-3">
-                            <label for="{{ form.capacidade.id_for_label }}" class="form-label">Capacidade (Pessoas)</label>
-                            {{ form.capacidade }}
-                        </div>
-
+                        
                         <button type="submit" class="btn btn-primary w-100">Adicionar Mesa</button>
                     </form>
                 </div>
@@ -52,7 +48,6 @@
                             <thead>
                                 <tr>
                                     <th>Número</th>
-                                    <th>Capacidade</th>
                                     <th>Status Atual</th>
                                     <th class="text-end">Ação</th>
                                 </tr>
@@ -61,7 +56,6 @@
                                 {% for mesa in mesas_list %}
                                 <tr>
                                     <td><strong>Mesa {{ mesa.numero }}</strong></td>
-                                    <td>{{ mesa.capacidade }} pessoas</td>
                                     <td>
                                         {% if mesa.status == 'LIVRE' %}
                                             <span class="badge bg-success">Livre</span>
@@ -86,8 +80,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center">Nenhuma mesa cadastrada ainda.</td>
-                                </tr>
+                                    <td colspan="3" class="text-center">Nenhuma mesa cadastrada ainda.</td> </tr>
                                 {% endfor %}
                             </tbody>
                         </table>

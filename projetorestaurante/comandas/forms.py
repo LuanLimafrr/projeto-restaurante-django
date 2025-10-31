@@ -2,7 +2,7 @@
 
 from django import forms
 from cardapio.models import ItemCardapio
-from .models import Mesa  # <-- ADICIONE ESTA IMPORTAÇÃO
+from .models import Mesa  # <-- IMPORTAÇÃO OK
 
 # --- SEU FORMULÁRIO EXISTENTE (Sem mudanças) ---
 class ItemComandaForm(forms.Form):
@@ -20,21 +20,20 @@ class ItemComandaForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Sem cebola, ponto mal passado'})
     )
 
-# --- NOVO FORMULÁRIO PARA ADICIONAR MESAS ---
+# --- FORMULÁRIO DE MESA (CORRIGIDO) ---
 class MesaForm(forms.ModelForm):
     class Meta:
         model = Mesa
-        # Assumindo que seu modelo 'Mesa' tem 'numero' e 'capacidade'
-        fields = ['numero', 'capacidade'] 
+        # CORREÇÃO AQUI: Removido 'capacidade'
+        fields = ['numero'] 
         widgets = {
             'numero': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Número da Mesa'}),
-            'capacidade': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Capacidade (pessoas)'}),
+            # CORREÇÃO AQUI: Removido widget 'capacidade'
         }
 
     # Esta função garante que o número da mesa não seja duplicado
     def clean_numero(self):
         numero = self.cleaned_data.get('numero')
-        # Verifica se já existe uma mesa com esse número (ignorando a si mesma, caso seja uma edição)
         if Mesa.objects.filter(numero=numero).exists():
             raise forms.ValidationError("Uma mesa com este número já existe.")
         return numero
