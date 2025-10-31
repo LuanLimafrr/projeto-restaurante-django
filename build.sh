@@ -8,4 +8,3 @@ pip install -r projetorestaurante/requirements.txt
 # Roda os comandos (o manage.py está na subpasta)
 python projetorestaurante/manage.py collectstatic --no-input
 python projetorestaurante/manage.py migrate
-python projetorestaurante/manage.py createsuperuser --noinput
