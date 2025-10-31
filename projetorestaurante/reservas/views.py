@@ -8,7 +8,6 @@ from .models import Reserva
 from .forms import ReservaForm
 from django.utils import timezone
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 
@@ -138,3 +137,52 @@ def cancelar_reserva(request, reserva_id):
     return redirect('gerenciar_reservas')
 
 # ... (Certifique-se de que suas outras views de reserva estejam aqui) ...
+
+@login_required
+def fazer_reserva(request):
+    if request.method == 'POST':
+        form = ReservaForm(request.POST)
+        if form.is_valid():
+            reserva = form.save(commit=False)
+            reserva.usuario = request.user
+            reserva.status = 'PENDENTE' # Ou outro status inicial
+            reserva.save()
+            messages.success(request, 'Sua reserva foi criada com sucesso! Aguardando confirmação.')
+            # Não envia e-mail aqui se a reserva é PENDENTE e você só envia status atualizado
+            # Se quiser enviar um e-mail de "reserva pendente", adicione:
+            # enviar_email_status_reserva(request, reserva)
+            return redirect('historico_reservas') # Redireciona para o histórico
+        else:
+            messages.error(request, 'Erro ao criar a reserva. Por favor, verifique os dados.')
+    else:
+        form = ReservaForm()
+    
+    # Renderiza o template 'reservas/fazer_reserva.html'
+    return render(request, 'reservas/fazer_reserva.html', {'form': form})
+
+# A view para o modal (geralmente renderiza apenas um formulário para AJAX ou para ser incluído)
+@login_required
+def fazer_reserva_modal(request):
+    if request.method == 'POST':
+        form = ReservaForm(request.POST)
+        if form.is_valid():
+            reserva = form.save(commit=False)
+            reserva.usuario = request.user
+            reserva.status = 'PENDENTE'
+            reserva.save()
+            # O modal geralmente precisa de uma resposta JSON ou um redirecionamento
+            # Aqui, para simplificar, redirecionamos. Para AJAX, você retornaria um JsonResponse.
+            messages.success(request, 'Sua reserva foi criada com sucesso (via modal)!')
+            # Você pode enviar o e-mail aqui se desejar um e-mail de "pendente"
+            # enviar_email_status_reserva(request, reserva)
+            return redirect('historico_reservas') # Redireciona para o histórico
+        else:
+            # Para modal, você geralmente retorna o formulário com erros ou JSON de erro
+            messages.error(request, 'Erro ao criar a reserva via modal. Por favor, verifique os dados.')
+            form = ReservaForm(request.POST) # Re-instancia o form para mostrar erros
+    else:
+        form = ReservaForm()
+    
+    # Renderiza o template 'reservas/fazer_reserva_modal.html' (se você tiver um)
+    # Ou 'reservas/fazer_reserva.html' se for um modal que usa o mesmo form
+    return render(request, 'reservas/fazer_reserva_modal.html', {'form': form})
