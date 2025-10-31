@@ -20,7 +20,7 @@
                 <span><i class="bi bi-calendar3 me-2"></i>Gerenciar Reservas</span>
                 {% if reservas_pendente_count > 0 %}<span class="badge bg-danger rounded-pill">{{ reservas_pendente_count }}</span>{% endif %}
             </a>
-
+            
             <a href="{% url 'gerenciar_mesas' %}"
                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'gerenciar_mesas' in request.resolver_match.view_name %}active{% endif %}">
                 <span><i class="bi bi-table me-2"></i>Gerenciar Mesas</span>
