@@ -1,7 +1,7 @@
 # /projetorestaurante/reservas/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 # ... (outros imports do django)
 from django.contrib import messages
 from .models import Reserva
