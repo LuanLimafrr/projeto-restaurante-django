@@ -167,18 +167,20 @@ LOGIN_URL = 'login' # <-- Use o nome da URL definida em usuarios/urls.py
 LOGIN_REDIRECT_URL = 'perfil' # <-- Nome da URL da página de perfil que vamos criar
 LOGOUT_REDIRECT_URL = 'inicio' # <-- Já aponta para sua landing page
 
-if not DEBUG: # Se não for ambiente de desenvolvimento (ou seja, PRODUÇÃO)
+if not DEBUG: # PRODUÇÃO
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.environ.get('EMAIL_HOST')
     EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-    # O 'False'.lower() == 'true' garante que 'True' seja interpretado como booleano True, e 'False' como False.
+    
+    # --- MUDANÇA AQUI ---
+    # Verifica se deve usar TLS ou SSL (não ambos)
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
+    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+    # --- FIM DA MUDANÇA ---
+    
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
     DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
     SERVER_EMAIL = os.environ.get('SERVER_EMAIL')
-else: # Ambiente de desenvolvimento local (DEBUG=True)
+else: # LOCAL
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    # Você pode definir um email padrão para testes locais se precisar
-    # DEFAULT_FROM_EMAIL = 'test@example.com'
-    # SERVER_EMAIL = 'test@example.com'
