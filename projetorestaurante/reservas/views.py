@@ -1,173 +1,163 @@
-# /projetorestaurante/reservas/views.py
+# Arquivo: reservas/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from .models import Reserva
 from .forms import ReservaForm
-from django.utils import timezone
+from .models import Reserva
+from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.conf import settings
-import requests
-import os
-from django.contrib.auth.models import User
-from cardapio.views import is_staff_user # Assumindo que sua função 'is_staff' está aqui
+from django.template.loader import render_to_string
+from django.contrib import messages
+from django.db.models import Sum
+from django.utils import timezone
+import datetime
+from datetime import timedelta # Garanta que timedelta está importado
 
-# --- FUNÇÃO DE EMAIL REESCRITA PARA USAR A API WEB DO SENDGRID ---
+# --- HELPER PARA ENVIAR EMAIL (sem mudanças) ---
 def enviar_email_status_reserva(request, reserva):
-    api_key = os.environ.get('EMAIL_HOST_PASSWORD')
-    from_email = os.environ.get('DEFAULT_FROM_EMAIL')
-
-    if not api_key or not from_email:
-        print("ERRO DE DEPLOY: API Key do SendGrid ou E-mail de Remetente não configurado.")
-        if request.user.is_staff:
-            messages.warning(request, "Configuração de e-mail incompleta no servidor.")
+    if not reserva.usuario or not reserva.usuario.email:
+        print(f"DEBUG: Reserva {reserva.id} sem usuário ou email.")
         return
-
-    status_map = {
-        'CONFIRMADA': 'Confirmada',
-        'CANCELADA': 'Cancelada',
-        'PENDENTE': 'Pendente',
-    }
-    status_amigavel = status_map.get(reserva.status, reserva.status)
-    assunto = f"Sua reserva no Chama do Cerrado foi {status_amigavel}!"
-    
-    nome_usuario = reserva.usuario.get_full_name() or reserva.usuario.username
-    mensagem_html = f"""
-    <html>
-    <body>
-        <h3>Olá, {nome_usuario}!</h3>
-        <p>O status da sua reserva no Chama do Cerrado foi atualizado:</p>
-        <hr>
-        <p><strong>Status:</strong> {status_amigavel}</p>
-        <p><strong>Data:</strong> {reserva.data.strftime('%d/%m/%Y')}</p>
-        <p><strong>Hora:</strong> {reserva.hora.strftime('%H:%M')}</p>
-        <p><strong>Pessoas:</strong> {reserva.numero_pessoas}</p>
-        <hr>
-        <p>Obrigado por escolher o Chama do Cerrado!</p>
-    </body>
-    </html>
-    """
-    
-    data = {
-        "personalizations": [{
-            "to": [{"email": reserva.usuario.email}],
-            "subject": assunto
-        }],
-        "from": {"email": from_email, "name": "Chama do Cerrado"},
-        "content": [{
-            "type": "text/html",
-            "value": mensagem_html
-        }]
-    }
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-
+    status_map = {'CONFIRMADA': 'Confirmada', 'CANCELADA': 'Cancelada'}
+    status_legivel = status_map.get(reserva.status)
+    if not status_legivel: return
+    assunto = f"Sua reserva no Chama do Cerrado foi {status_legivel}!"
+    contexto_email = {'reserva': reserva, 'status_legivel': status_legivel}
+    mensagem_txt = render_to_string('emails/status_reserva.txt', contexto_email)
     try:
-        response = requests.post('https://api.sendgrid.com/v3/mail/send', headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 202:
-            print(f"E-mail de {status_amigavel} enviado para {reserva.usuario.email}.")
-        else:
-            print(f"Erro ao enviar email via SendGrid API: {response.status_code} - {response.text}")
-            if request.user.is_staff:
-                messages.warning(request, f"Reserva salva, mas houve um erro ao enviar o e-mail (API SendGrid: {response.status_code}).")
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Erro de rede ao conectar com SendGrid API: {e}")
-        if request.user.is_staff:
-            messages.warning(request, "Reserva salva, mas o serviço de e-mail demorou a responder.")
+        send_mail(assunto, mensagem_txt, settings.DEFAULT_FROM_EMAIL, [reserva.usuario.email], fail_silently=False)
+        print(f"DEBUG: Email status '{status_legivel}' enviado para {reserva.usuario.email}")
+    except Exception as e:
+        print(f"Erro ao enviar email para {reserva.usuario.email}: {e}")
+        if request: messages.error(request, f"Erro ao enviar email para {reserva.usuario.email}.")
 
-
-# --- VIEW FAZER RESERVA (PÁGINA PRINCIPAL) ---
-@login_required
-def fazer_reserva(request):
-    if request.method == 'POST':
-        form = ReservaForm(request.POST)
-        if form.is_valid():
-            reserva = form.save(commit=False)
-            reserva.usuario = request.user
-            reserva.status = 'PENDENTE'
-            reserva.save()
-            messages.success(request, 'Sua reserva foi criada com sucesso! Aguardando confirmação.')
-            # AQUI: Redireciona para o histórico de reservas do CLIENTE
-            return redirect('historico_reservas')
-        else:
-            messages.error(request, 'Erro ao criar a reserva. Por favor, verifique os dados.')
-    else:
-        form = ReservaForm()
-    return render(request, 'reservas/fazer_reserva.html', {'form': form})
-
-# --- VIEW FAZER RESERVA (MODAL) ---
+# --- Views Cliente (fazer_reserva_modal, fazer_reserva - sem mudanças) ---
 @login_required
 def fazer_reserva_modal(request):
+    if request.user.is_staff: messages.error(request, "Funcionários não podem fazer reservas."); return redirect('inicio')
     if request.method == 'POST':
         form = ReservaForm(request.POST)
         if form.is_valid():
-            reserva = form.save(commit=False)
-            reserva.usuario = request.user
-            reserva.status = 'PENDENTE'
-            reserva.save()
-            messages.success(request, 'Sua reserva foi criada com sucesso (via modal)!')
-            # AQUI: Redireciona para o histórico de reservas do CLIENTE
-            return redirect('historico_reservas')
-        else:
-            messages.error(request, 'Erro ao criar a reserva via modal. Por favor, verifique os dados.')
-            form = ReservaForm(request.POST)
-    else:
-        form = ReservaForm()
-    return render(request, 'reservas/fazer_reserva_modal.html', {'form': form})
+            data_reserva = form.cleaned_data['data']; hora_reserva = form.cleaned_data['hora']; novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            reservas_existentes = Reserva.objects.filter(data=data_reserva, hora=hora_reserva, status__in=['PENDENTE', 'CONFIRMADA'])
+            total_pessoas = reservas_existentes.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
+            limite = settings.RESTAURANTE_CAPACIDADE_POR_HORARIO
+            if (total_pessoas + novas_pessoas) > limite:
+                vagas = limite - total_pessoas; messages.error(request, f"Horário lotado. Vagas: {vagas}.")
+            else:
+                reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
+                messages.success(request, 'Solicitação enviada! Aguarde email.')
+                return redirect('perfil')
+        else: messages.error(request, f"Erro: {next(iter(form.errors.values()))[0] if form.errors else 'Verifique.'}")
+    return redirect('inicio')
 
-# --- VIEW HISTÓRICO DE RESERVAS (PARA O CLIENTE) ---
+@login_required
+def fazer_reserva(request):
+    if request.user.is_staff: messages.error(request, "Funcionários não podem fazer reservas."); return redirect('inicio')
+    if request.method == 'POST':
+        form = ReservaForm(request.POST)
+        if form.is_valid():
+            data_reserva = form.cleaned_data['data']; hora_reserva = form.cleaned_data['hora']; novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            reservas_existentes = Reserva.objects.filter(data=data_reserva, hora=hora_reserva, status__in=['PENDENTE', 'CONFIRMADA'])
+            total_pessoas = reservas_existentes.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
+            limite = settings.RESTAURANTE_CAPACIDADE_POR_HORARIO
+            if (total_pessoas + novas_pessoas) > limite:
+                vagas = limite - total_pessoas; form.add_error(None, f"Horário lotado. Vagas: {vagas}.")
+            else:
+                reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
+                messages.success(request, 'Solicitação enviada! Aguarde email.')
+                return redirect('perfil')
+    else: form = ReservaForm()
+    contexto = {'form': form}
+    return render(request, 'reservas/fazer_reserva.html', contexto)
+
+
+# --- VIEW GERENCIAR RESERVAS (ATUALIZADA COM TRADUÇÃO) ---
+@login_required
+def gerenciar_reservas(request):
+    if not request.user.is_staff: return redirect('inicio')
+
+    hoje = timezone.now().date()
+    data_selecionada_str = request.GET.get('data')
+    data_selecionada = hoje
+    if data_selecionada_str:
+        try: data_selecionada = datetime.datetime.strptime(data_selecionada_str, '%Y-%m-%d').date()
+        except ValueError: messages.error(request, "Data inválida."); data_selecionada = hoje
+
+    # --- DICIONÁRIO DE TRADUÇÃO ---
+    # Python weekday(): Segunda=0, Terça=1, ..., Domingo=6
+    weekdays_pt = {
+        0: 'Segunda-feira', 1: 'Terça-feira', 2: 'Quarta-feira',
+        3: 'Quinta-feira', 4: 'Sexta-feira', 5: 'Sábado', 6: 'Domingo'
+    }
+
+    # Calcular Disponibilidade
+    dias_com_vagas = []
+    limite_total = settings.RESTAURANTE_CAPACIDADE_POR_HORARIO
+    for i in range(7):
+        dia = hoje + timedelta(days=i)
+        reservas_no_dia = Reserva.objects.filter(data=dia, status__in=['PENDENTE', 'CONFIRMADA'])
+        pessoas_no_dia = reservas_no_dia.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
+        vagas_restantes = max(0, limite_total - pessoas_no_dia)
+        
+        dia_da_semana_int = dia.weekday() # Pega o índice (0-6)
+        
+        dias_com_vagas.append({
+            'data': dia,
+            'pessoas': pessoas_no_dia,
+            'vagas': vagas_restantes,
+            'limite': limite_total,
+            'dia_semana_pt': weekdays_pt[dia_da_semana_int] # Adiciona nome em PT-BR
+        })
+
+    # Filtrar Lista para a DATA SELECIONADA
+    reservas_pendentes_dia = Reserva.objects.filter(status='PENDENTE', data=data_selecionada)
+    reservas_confirmadas_dia = Reserva.objects.filter(status='CONFIRMADA', data=data_selecionada)
+    lista_reservas_dia = (reservas_pendentes_dia | reservas_confirmadas_dia).order_by('hora').distinct()
+
+    # Buscar TODAS AS RESERVAS PENDENTES (para a Aba 2)
+    reservas_pendentes_todas = Reserva.objects.filter(status='PENDENTE').order_by('data', 'hora')
+
+    contexto = {
+        'lista_reservas_dia': lista_reservas_dia,
+        'reservas_pendentes_todas': reservas_pendentes_todas,
+        'dias_com_vagas': dias_com_vagas,
+        'data_selecionada': data_selecionada,
+    }
+    return render(request, 'reservas/gerenciar.html', contexto)
+
+
+# --- historico_reservas (sem mudanças) ---
 @login_required
 def historico_reservas(request):
-    reservas = Reserva.objects.filter(usuario=request.user).order_by('-data', '-hora')
-    # AJUSTADO: Usa o nome do arquivo correto `historico.html`
-    return render(request, 'reservas/historico.html', {'reservas': reservas})
+    if not request.user.is_staff: return redirect('inicio')
+    hoje = timezone.now().date()
+    reservas_canceladas = Reserva.objects.filter(status='CANCELADA')
+    reservas_confirmadas_passadas = Reserva.objects.filter(status='CONFIRMADA', data__lt=hoje)
+    lista_historico = (reservas_canceladas | reservas_confirmadas_passadas).order_by('-data', '-hora').distinct()
+    contexto = {'lista_historico': lista_historico}
+    return render(request, 'reservas/historico.html', contexto)
 
-# --- VIEW GERENCIAR RESERVAS (PARA O STAFF - ATUAIS/PENDENTES) ---
+# --- confirmar_reserva (sem mudanças) ---
 @login_required
-@user_passes_test(is_staff_user)
-def gerenciar_reservas(request):
-    reservas_pendentes = Reserva.objects.filter(status='PENDENTE').order_by('data', 'hora')
-    reservas_confirmadas = Reserva.objects.filter(status='CONFIRMADA', data__gte=timezone.now().date()).order_by('data', 'hora')
-    
-    context = {
-        'reservas_pendentes': reservas_pendentes,
-        'reservas_confirmadas': reservas_confirmadas,
-    }
-    # AJUSTADO: Usa o nome do arquivo correto `gerenciar.html`
-    return render(request, 'reservas/gerenciar.html', context)
-
-# --- NOVA VIEW HISTÓRICO GERAL DE RESERVAS (PARA O STAFF) ---
-@login_required
-@user_passes_test(is_staff_user)
-def historico_geral_reservas_staff(request):
-    # Para o staff, mostra todas as reservas, incluindo canceladas e passadas.
-    reservas = Reserva.objects.all().order_by('-data', '-hora')
-    return render(request, 'reservas/historico_geral_staff.html', {'reservas': reservas})
-
-
-# --- VIEW CONFIRMAR RESERVA (PARA O STAFF) ---
-@login_required
-@user_passes_test(is_staff_user)
 def confirmar_reserva(request, id):
+    if not request.user.is_staff: return redirect('inicio')
     reserva = get_object_or_404(Reserva, id=id)
-    reserva.status = 'CONFIRMADA'
-    reserva.save()
-    messages.success(request, f"Reserva de {reserva.usuario.get_full_name()} confirmada!")
-    enviar_email_status_reserva(request, reserva) 
+    if reserva.status == 'PENDENTE':
+        reserva.status = 'CONFIRMADA'; reserva.save()
+        nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
+        messages.success(request, f"Reserva de {nome_cliente} confirmada.")
+        enviar_email_status_reserva(request, reserva)
     return redirect('gerenciar_reservas')
 
-# --- VIEW CANCELAR RESERVA (PARA O STAFF) ---
+# --- cancelar_reserva (sem mudanças) ---
 @login_required
-@user_passes_test(is_staff_user)
 def cancelar_reserva(request, id):
+    if not request.user.is_staff: return redirect('inicio')
     reserva = get_object_or_404(Reserva, id=id)
-    reserva.status = 'CANCELADA'
-    reserva.save()
-    messages.warning(request, f"Reserva de {reserva.usuario.get_full_name()} foi cancelada.")
-    enviar_email_status_reserva(request, reserva) 
+    if reserva.status != 'CANCELADA':
+        reserva.status = 'CANCELADA'; reserva.save()
+        nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
+        messages.warning(request, f"Reserva de {nome_cliente} cancelada.")
+        enviar_email_status_reserva(request, reserva)
     return redirect('gerenciar_reservas')

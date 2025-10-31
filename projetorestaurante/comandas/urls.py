@@ -5,10 +5,6 @@ from . import views
 urlpatterns = [
     path('', views.mapa_mesas, name='mapa_mesas'),
     
-    # --- URL ADICIONADA ---
-    path('gerenciar-mesas/', views.gerenciar_mesas, name='gerenciar_mesas'),
-    # --- FIM DA ADIÇÃO ---
-    
     # --- GARANTIA DA URL CORRETA ---
     # Esta é a URL que o dashboard usa para alocar
     path('processar-alocacao/<int:id_mesa>/<int:id_cliente>/', views.processar_alocacao_cliente, name='processar_alocacao_cliente'),

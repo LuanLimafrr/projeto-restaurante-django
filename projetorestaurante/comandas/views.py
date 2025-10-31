@@ -19,10 +19,6 @@ from cardapio.views import is_staff_user # Assumindo que está em cardapio/views
 # (Se 'is_staff_user' não estiver em cardapio/views.py, descomente a linha abaixo)
 # def is_staff_user(user): return user.is_staff
 
-# --- ADICIONE A IMPORTAÇÃO DO NOVO FORMULÁRIO ---
-from .forms import ItemComandaForm, MesaForm
-
-
 # --- VIEW PRINCIPAL DO STAFF (sem mudanças) ---
 @login_required
 @user_passes_test(is_staff_user, login_url='inicio') # Agora 'user_passes_test' está importado
@@ -71,8 +67,8 @@ def detalhe_comanda(request, id_mesa):
         if form.is_valid():
             item_sel = form.cleaned_data['item_cardapio']; qtd = form.cleaned_data['quantidade']; obs = form.cleaned_data.get('observacao')
             if item_sel.item_estoque and item_sel.item_estoque.quantidade_atual < qtd:
-                messages.error(request, f"Estoque insuficiente para '{item_sel.nome}'. Restam {item_sel.item_estoque.quantidade_atual} un.")
-                form_invalido = form
+                 messages.error(request, f"Estoque insuficiente para '{item_sel.nome}'. Restam {item_sel.item_estoque.quantidade_atual} un.")
+                 form_invalido = form
             else:
                 ItemComanda.objects.create(comanda=comanda_ativa, item_cardapio=item_sel, quantidade=qtd, observacao=obs)
                 messages.success(request, f"Item '{item_sel.nome}' adicionado.")
@@ -83,7 +79,7 @@ def detalhe_comanda(request, id_mesa):
     contexto = { 'mesa': mesa, 'comanda': comanda_ativa, 'itens_da_comanda': itens_da_comanda, 'form': form_para_template }
     return render(request, 'comandas/detalhe_comanda.html', contexto)
 
-# --- VIEW FECHAR CONTA / GERAR NOTA (sem mudanças) ---
+# --- VIEW FECHAR CONTA / GERAR NOTA (ATUALIZADA) ---
 @login_required
 @user_passes_test(is_staff_user, login_url='inicio')
 def fechar_comanda(request, id_comanda):
@@ -193,46 +189,3 @@ def relatorio_diario(request):
     valor_total = (total_vendido_bruto + total_taxa_calc).quantize(Decimal('0.01'))
     contexto = { 'titulo_relatorio': titulo_relatorio, 'data_inicio': data_inicio, 'data_fim': data_fim, 'periodo_selecionado': periodo, 'numero_comandas': num_comandas, 'valor_total': valor_total, 'comandas_do_periodo': comandas_no_periodo.order_by('-timestamp_fechamento')}
     return render(request, 'comandas/relatorio_diario.html', contexto)
-
-
-# --- NOVA VIEW PARA GERENCIAR MESAS ---
-@user_passes_test(is_staff_user) # Protege a página para que só staff possa ver
-def gerenciar_mesas(request):
-    
-    # Lógica para ADICIONAR (POST sem 'action')
-    if request.method == 'POST' and 'action' not in request.POST:
-        form = MesaForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Mesa adicionada com sucesso!')
-            return redirect('gerenciar_mesas') # Redireciona para a mesma página
-        else:
-            # Se o formulário for inválido, exibe os erros
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{error}")
-    
-    # Lógica para EXCLUIR (POST com 'action=delete')
-    elif request.method == 'POST' and request.POST.get('action') == 'delete':
-        mesa_id = request.POST.get('mesa_id')
-        try:
-            mesa_para_excluir = get_object_or_404(Mesa, id=mesa_id)
-            if mesa_para_excluir.status == 'OCUPADA' or mesa_para_excluir.status == 'PAGAMENTO':
-                messages.error(request, f'Não é possível excluir a mesa {mesa_para_excluir.numero}, pois ela está em uso.')
-            else:
-                numero_mesa_excluida = mesa_para_excluir.numero
-                mesa_para_excluir.delete()
-                messages.success(request, f'Mesa {numero_mesa_excluida} excluída com sucesso!')
-        except Exception as e:
-            messages.error(request, f'Erro ao excluir a mesa: {e}')
-        return redirect('gerenciar_mesas')
-
-    # Lógica para MOSTRAR A PÁGINA (GET)
-    form = MesaForm() # Cria um formulário vazio
-    mesas_list = Mesa.objects.all().order_by('numero') # Pega todas as mesas
-    
-    context = {
-        'form': form,
-        'mesas_list': mesas_list,
-    }
-    return render(request, 'comandas/gerenciar_mesas.html', context)

@@ -10,12 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-
-from decouple import config
-import dj_database_url
-import os # (Verifique se 'os' e 'Path' já não estão importados)
 from pathlib import Path
-import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,20 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = 'django-insecure-*ls(ld-*_jj@)(ac^0rh9a)a$z)a3o-i+#ov0f^2!1dlobo@$t'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
-# settings.py
+ALLOWED_HOSTS = []
 
-ALLOWED_HOSTS = [
-    'projeto-restaurante-zyuu.onrender.com', # O subdomínio padrão do Render
-    'chamadoserrado.online',
-    'www.chamadoserrado.online',
-    'localhost', # Para desenvolvimento local, se quiser
-    '127.0.0.1' # Para desenvolvimento local, se quiser
-]
 
 # Application definition
 
@@ -59,7 +47,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -98,9 +85,10 @@ WSGI_APPLICATION = 'restaurante.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 
@@ -139,7 +127,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -156,8 +143,6 @@ STATICFILES_DIRS = [
 # STATIC_ROOT deve estar definido para que o código do urls.py funcione, mesmo que vazio por enquanto.
 STATIC_ROOT = BASE_DIR / 'staticfiles_coletados'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 # Configuração de arquivos de Mídia (uploads dos usuários)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -167,20 +152,10 @@ LOGIN_URL = 'login' # <-- Use o nome da URL definida em usuarios/urls.py
 LOGIN_REDIRECT_URL = 'perfil' # <-- Nome da URL da página de perfil que vamos criar
 LOGOUT_REDIRECT_URL = 'inicio' # <-- Já aponta para sua landing page
 
-if not DEBUG: # PRODUÇÃO
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get('EMAIL_HOST')
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-    
-    # --- MUDANÇA AQUI ---
-    # Verifica se deve usar TLS ou SSL (não ambos)
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
-    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-    # --- FIM DA MUDANÇA ---
-    
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
-    SERVER_EMAIL = os.environ.get('SERVER_EMAIL')
-else: # LOCAL
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Imprime email no console
+# Para produção (ex: Gmail):
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'; EMAIL_PORT = 587; EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'seu_email@gmail.com'; EMAIL_HOST_PASSWORD = 'sua_senha_de_app'
+
+DEFAULT_FROM_EMAIL = 'Chama do Cerrado <nao-responda@chamadocerrado.com.br>'    

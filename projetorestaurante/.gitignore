@@ -22,4 +22,4 @@ staticfiles/
 *.log
 .vscode/
 .idea/
-
+restaurante/settings.py
