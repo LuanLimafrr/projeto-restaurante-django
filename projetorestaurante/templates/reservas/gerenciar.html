@@ -1,111 +1,113 @@
-{% extends "staff_base.html" %}
+{% extends 'staff_base.html' %}
 {% load static %}
-{% load i18n %}
 
 {% block title %}Gerenciar Reservas{% endblock %}
 
-{% block main_content %} {# Certifique-se que usa main_content #}
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Disponibilidade Próximos Dias</h5>
-        <a href="{% url 'historico_reservas' %}" class="btn btn-sm btn-outline-secondary">
-             Ver Histórico/Canceladas
-        </a>
-    </div>
-    <div class="card-body">
-        <div class="row g-2 text-center">
-            {% for dia in dias_com_vagas %}
-            <div class="col">
-                 <a href="{% url 'gerenciar_reservas' %}?data={{ dia.data|date:'Y-m-d' }}"
-                    class="btn {% if dia.data == data_selecionada %}btn-primary{% else %}btn-outline-primary{% endif %} w-100 d-flex flex-column align-items-center p-2">
-                     
-                     <span class="fw-bold" style="font-size: 0.9em;">
-                         {% if forloop.counter0 == 0 %}Hoje{% else %}{{ dia.data|date:"d/m" }}{% endif %} - {{ dia.dia_semana_pt }}
-                     </span>
-                     
-                     <span class="d-block fw-bold mt-1 {% if dia.vagas <= 5 %}text-danger{% elif dia.vagas <= 15 %}text-warning{% else %}text-success{% endif %}" style="font-size: 1.1rem;">
-                         {{ dia.vagas }} vagas
-                     </span>
-                     
-                     </a>
-            </div>
-            {% endfor %}
+{% block main_content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Gerenciar Reservas</h2>
+        <div>
+            <a href="{% url 'historico_reservas_staff' %}" class="btn btn-outline-info">VER HISTÓRICO/CANCELADAS</a>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card bg-dark text-white shadow mb-4">
+                <div class="card-header bg-darker">
+                    <h5 class="m-0 font-weight-bold text-light">Disponibilidade Próximos Dias</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" id="reservasTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active text-white" id="confirmadas-tab" data-bs-toggle="tab" data-bs-target="#confirmadas" type="button" role="tab" aria-controls="confirmadas" aria-selected="true">
+                                Reservas do Dia ({{ reservas_confirmadas|length }})
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-white" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes" type="button" role="tab" aria-controls="pendentes" aria-selected="false">
+                                Solicitações Pendentes ({{ reservas_pendentes|length }})
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="reservasTabContent">
+                        <div class="tab-pane fade show active" id="confirmadas" role="tabpanel" aria-labelledby="confirmadas-tab">
+                            {% if reservas_confirmadas %}
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th>Hora</th>
+                                                <th>Pessoas</th>
+                                                <th>Status</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for reserva in reservas_confirmadas %}
+                                                <tr>
+                                                    <td>{{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</td>
+                                                    <td>{{ reserva.hora|time:"H:i" }}</td>
+                                                    <td>{{ reserva.numero_pessoas }}</td>
+                                                    <td><span class="badge bg-success">{{ reserva.get_status_display }}</span></td>
+                                                    <td>
+                                                        <a href="{% url 'cancelar_reserva' reserva.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja cancelar esta reserva?');">Cancelar</a>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-light">Nenhuma reserva confirmada encontrada para esta data.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="tab-pane fade" id="pendentes" role="tabpanel" aria-labelledby="pendentes-tab">
+                            {% if reservas_pendentes %}
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th>Hora</th>
+                                                <th>Pessoas</th>
+                                                <th>Status</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for reserva in reservas_pendentes %}
+                                                <tr>
+                                                    <td>{{ reserva.usuario.get_full_name|default:reserva.usuario.username }}</td>
+                                                    <td>{{ reserva.hora|time:"H:i" }}</td>
+                                                    <td>{{ reserva.numero_pessoas }}</td>
+                                                    <td><span class="badge bg-warning text-dark">{{ reserva.get_status_display }}</span></td>
+                                                    <td>
+                                                        <a href="{% url 'confirmar_reserva' reserva.id %}" class="btn btn-sm btn-success me-2">Confirmar</a>
+                                                        <a href="{% url 'cancelar_reserva' reserva.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja cancelar esta reserva?');">Cancelar</a>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-light">Nenhuma solicitação de reserva pendente.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{% url 'dashboard_staff' %}" class="btn btn-secondary">← VOLTAR AO PAINEL PRINCIPAL</a>
+    </div>
+
 </div>
-
-<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="pills-dia-tab" data-bs-toggle="pill" data-bs-target="#pills-dia" type="button" role="tab" aria-controls="pills-dia" aria-selected="true">
-        Reservas do Dia ({{ data_selecionada|date:"d/m" }})
-    </button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link position-relative" id="pills-pendentes-tab" data-bs-toggle="pill" data-bs-target="#pills-pendentes" type="button" role="tab" aria-controls="pills-pendentes" aria-selected="false">
-        Solicitações Pendentes
-        {% if reservas_pendentes_todas.count > 0 %}
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                {{ reservas_pendentes_todas.count }}
-            </span>
-        {% endif %}
-    </button>
-  </li>
-</ul>
-
-<div class="tab-content" id="pills-tabContent">
-  <div class="tab-pane fade show active" id="pills-dia" role="tabpanel" aria-labelledby="pills-dia-tab" tabindex="0">
-    <div class="card shadow-sm"><div class="card-body">
-        <table class="table table-striped table-hover mb-0 align-middle">
-            <thead><tr><th>Cliente</th><th>Hora</th><th>Pessoas</th><th>Status</th><th>Ações</th></tr></thead>
-            <tbody>
-                {% for reserva in lista_reservas_dia %}
-                <tr>
-                    <td> {% if reserva.usuario %} {{ reserva.usuario.get_full_name|default:reserva.usuario.username }} {% else %} <span class="text-muted fst-italic">Res. Antiga</span> {% endif %} </td>
-                    <td>{{ reserva.hora|time:"H:i" }}</td>
-                    <td>{{ reserva.quantidade_pessoas }}</td>
-                    <td>
-                        {% if reserva.status == 'PENDENTE' %} <span class="badge bg-warning text-dark">{{ reserva.get_status_display }}</span>
-                        {% elif reserva.status == 'CONFIRMADA' %} <span class="badge bg-success">{{ reserva.get_status_display }}</span>
-                        {% else %} <span class="badge bg-danger">{{ reserva.get_status_display }}</span> {% endif %}
-                    </td>
-                    <td>
-                        {% if reserva.status == 'PENDENTE' %}
-                            <a href="{% url 'confirmar_reserva' reserva.id %}" class="btn btn-sm btn-success">Confirmar</a>
-                            <a href="{% url 'cancelar_reserva' reserva.id %}" class="btn btn-sm btn-danger">Cancelar</a>
-                        {% else %}
-                            <span class="text-muted fst-italic">Confirmada</span>
-                             <a href="{% url 'cancelar_reserva' reserva.id %}" class="btn btn-sm btn-outline-danger ms-1" title="Cancelar Reserva Confirmada">Cancelar</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %} <tr> <td colspan="5" class="text-center py-4">Nenhuma reserva encontrada para esta data.</td> </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div></div>
-  </div>
-  <div class="tab-pane fade" id="pills-pendentes" role="tabpanel" aria-labelledby="pills-pendentes-tab" tabindex="0">
-     <div class="card shadow-sm"><div class="card-body">
-        <table class="table table-striped table-hover mb-0 align-middle">
-            <thead><tr><th>Cliente</th><th>Data</th><th>Hora</th><th>Pessoas</th><th>Ações</th></tr></thead>
-            <tbody>
-                {% for reserva in reservas_pendentes_todas %}
-                <tr>
-                     <td> {% if reserva.usuario %} {{ reserva.usuario.get_full_name|default:reserva.usuario.username }} {% else %} <span class="text-muted fst-italic">Res. Antiga</span> {% endif %} </td>
-                     <td>{{ reserva.data|date:"d/m/Y" }}</td><td>{{ reserva.hora|time:"H:i" }}</td><td>{{ reserva.quantidade_pessoas }}</td>
-                     <td><a href="{% url 'confirmar_reserva' reserva.id %}" class="btn btn-sm btn-success">Confirmar</a> <a href="{% url 'cancelar_reserva' reserva.id %}" class="btn btn-sm btn-danger">Cancelar</a></td>
-                </tr>
-                {% empty %} <tr> <td colspan="5" class="text-center py-4">Nenhuma solicitação de reserva pendente.</td> </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-     </div></div>
-  </div>
-</div>
-
-<div class="mt-4 mb-3">
-    <a href="{% url 'inicio' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao Painel Principal</a>
-</div>
-
 {% endblock %}
