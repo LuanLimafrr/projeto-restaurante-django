@@ -7,7 +7,7 @@ from .models import Reserva
 from .forms import ReservaForm
 from django.utils import timezone
 from django.conf import settings
-# from django.core.mail import send_mail  <-- REMOVIDO (Não usamos mais)
+# from django.core.mail import send_mail  <-- REMOVIDO (Não usamos mais)
 # from django.template.loader import render_to_string <-- REMOVIDO
 from django.contrib.auth.models import User
 from cardapio.views import is_staff_user # Assumindo que sua função 'is_staff' está aqui
@@ -22,7 +22,7 @@ import os
 # SE a função 'is_staff_user' (importada de cardapio.views) NÃO funcionar,
 # descomente a linha abaixo para definir 'is_staff' localmente.
 # def is_staff(user):
-#    return user.is_staff
+#    return user.is_staff
 
 # --- FUNÇÃO DE EMAIL REESCRITA PARA USAR A API WEB DO SENDGRID ---
 def enviar_email_status_reserva(request, reserva):
@@ -146,13 +146,16 @@ def fazer_reserva_modal(request):
         form = ReservaForm()
     
     # Renderiza o template 'reservas/fazer_reserva_modal.html' (ou o que você usar)
+    # AJUSTADO: Se você tem fazer_reserva_modal.html, mantenha, senão ajuste.
+    # Assumi que 'fazer_reserva_modal.html' realmente existe como arquivo separado.
     return render(request, 'reservas/fazer_reserva_modal.html', {'form': form})
 
 # --- VIEW HISTÓRICO DE RESERVAS (PARA O USUÁRIO) ---
 @login_required
 def historico_reservas(request):
     reservas = Reserva.objects.filter(usuario=request.user).order_by('-data', '-hora')
-    return render(request, 'reservas/historico_reservas.html', {'reservas': reservas})
+    # AJUSTADO AQUI: O template é 'reservas/historico.html', não 'reservas/historico_reservas.html'
+    return render(request, 'reservas/historico.html', {'reservas': reservas})
 
 # --- VIEW GERENCIAR RESERVAS (PARA O STAFF) ---
 @login_required
@@ -167,7 +170,8 @@ def gerenciar_reservas(request):
         'reservas_pendentes': reservas_pendentes,
         'reservas_confirmadas': reservas_confirmadas,
     }
-    return render(request, 'reservas/gerenciar_reservas.html', context)
+    # AJUSTADO AQUI: O template é 'reservas/gerenciar.html', não 'reservas/gerenciar_reservas.html'
+    return render(request, 'reservas/gerenciar.html', context)
 
 # --- VIEW CONFIRMAR RESERVA (PARA O STAFF) ---
 @login_required
