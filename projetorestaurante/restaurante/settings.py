@@ -22,6 +22,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Ajustado para ler do .env ou do Render
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 
 # Application definition
 

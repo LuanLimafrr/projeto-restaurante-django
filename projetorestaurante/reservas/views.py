@@ -12,24 +12,41 @@ from django.db.models import Sum
 from django.utils import timezone
 import datetime
 from datetime import timedelta # Garanta que timedelta está importado
+from utils.emails import send_email_with_sendgrid_api
 
 # --- HELPER PARA ENVIAR EMAIL (sem mudanças) ---
 def enviar_email_status_reserva(request, reserva):
     if not reserva.usuario or not reserva.usuario.email:
         print(f"DEBUG: Reserva {reserva.id} sem usuário ou email.")
         return
+
     status_map = {'CONFIRMADA': 'Confirmada', 'CANCELADA': 'Cancelada'}
     status_legivel = status_map.get(reserva.status)
-    if not status_legivel: return
+    if not status_legivel:
+        return
+
     assunto = f"Sua reserva no Chama do Cerrado foi {status_legivel}!"
     contexto_email = {'reserva': reserva, 'status_legivel': status_legivel}
-    mensagem_txt = render_to_string('emails/status_reserva.txt', contexto_email)
+    mensagem_html = render_to_string('emails/status_reserva.html', contexto_email) # Renderize HTML, não TXT
+
     try:
-        send_mail(assunto, mensagem_txt, settings.DEFAULT_FROM_EMAIL, [reserva.usuario.email], fail_silently=False)
-        print(f"DEBUG: Email status '{status_legivel}' enviado para {reserva.usuario.email}")
+        # Troca de send_mail por send_email_with_sendgrid_api
+        sucesso = send_email_with_sendgrid_api(
+            to_email=reserva.usuario.email,
+            subject=assunto,
+            html_content=mensagem_html,
+            from_email=settings.DEFAULT_FROM_EMAIL
+        )
+        if sucesso:
+            print(f"DEBUG: Email status '{status_legivel}' enviado com sucesso para {reserva.usuario.email} via SendGrid API.")
+            # messages.success(request, f"E-mail de status enviado para {reserva.usuario.email}.") # Opcional
+        else:
+            print(f"Erro: Falha no envio de email para {reserva.usuario.email} via SendGrid API.")
+            if request: messages.error(request, f"Erro ao enviar email para {reserva.usuario.email}.")
+
     except Exception as e:
-        print(f"Erro ao enviar email para {reserva.usuario.email}: {e}")
-        if request: messages.error(request, f"Erro ao enviar email para {reserva.usuario.email}.")
+        print(f"Exceção inesperada ao tentar enviar email para {reserva.usuario.email}: {e}")
+        if request: messages.error(request, f"Erro crítico ao enviar email para {reserva.usuario.email}.")
 
 # --- Views Cliente (fazer_reserva_modal, fazer_reserva - sem mudanças) ---
 @login_required
