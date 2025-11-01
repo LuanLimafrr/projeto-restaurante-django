@@ -16,19 +16,12 @@ def send_email_with_sendgrid_api(to_email, subject, html_content, from_email=Non
         html_content=html_content
     )
     try:
-        sendgrid_client = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+   # ATENÇÃO: ALTERAÇÃO TEMPORÁRIA APENAS PARA TESTE
+        # sendgrid_client = SendGridAPIClient(sendgrid_api_key) # LINHA ORIGINAL
+        sendgrid_client = SendGridAPIClient("SG.FAKE_API_KEY_FOR_TESTING_ONLY") # <--- USE UMA CHAVE FALSA AQUI TEMPORARIAMENTE
+        # FIM DA ALTERAÇÃO TEMPORÁRIA
+
         response = sendgrid_client.send(message)
-        
-        # Estas linhas serão impressas nos logs do Render
-        print(f"DEBUG: E-mail para {to_email} enviado com Status: {response.status_code}")
-        print(f"DEBUG: Headers: {response.headers}")
-        print(f"DEBUG: Body: {response.body}")
-        
-        if response.status_code >= 200 and response.status_code < 300:
-            return True
-        else:
-            print(f"Erro ao enviar email via SendGrid API. Status: {response.status_code}, Body: {response.body}")
-            return False
     except Exception as e:
         print(f"Exceção ao enviar email via SendGrid API: {e}")
         return False
