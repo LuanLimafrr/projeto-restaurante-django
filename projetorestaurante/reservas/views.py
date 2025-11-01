@@ -12,8 +12,65 @@ from django.db.models import Sum
 from django.utils import timezone
 import datetime
 from datetime import timedelta # Garanta que timedelta está importado
-from restaurante.utils.emails import send_email_with_sendgrid_api
+from django.conf import settings
 
+
+
+def send_email_via_api(to_email, subject, html_content):
+    api_key = os.environ.get('SENDGRID_API_KEY')
+    from_email = settings.DEFAULT_FROM_EMAIL # Usar settings.DEFAULT_FROM_EMAIL
+
+    print(f"DEBUG (send_email_via_api): SENDGRID_API_KEY lida: {'(presente)' if api_key else '(AUSENTE)'}")
+    if api_key:
+        print(f"DEBUG (send_email_via_api): Tamanho da API Key: {len(api_key)}")
+    else:
+        print("ERRO CRÍTICO (send_email_via_api): SENDGRID_API_KEY não encontrada nas variáveis de ambiente.")
+        return False
+
+    if not from_email:
+        print("ERRO CRÍTICO (send_email_via_api): DEFAULT_FROM_EMAIL não configurado.")
+        return False
+
+    data = { # Estrutura JSON SendGrid
+        "personalizations": [{"to": [{"email": to_email}]}], # Assunto vai nos headers agora
+        "from": {"email": from_email, "name": "Chama do Cerrado"}, # Use DEFAULT_FROM_EMAIL
+        "subject": subject, # Assunto aqui no body, não nos headers
+        "content": [{"type": "text/html", "value": html_content}]
+    }
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        print(f"DEBUG (send_email_via_api): Tentando enviar email para {to_email}...")
+        response = requests.post(
+            'https://api.sendgrid.com/v3/mail/send', 
+            headers=headers, 
+            json=data, 
+            timeout=15 # Aumentar o timeout um pouco
+        )
+
+        print(f"DEBUG (send_email_via_api): Resposta SendGrid Status: {response.status_code}")
+        print(f"DEBUG (send_email_via_api): Resposta SendGrid Body: {response.text}") # Use .text para ver o conteúdo
+
+        if response.status_code >= 200 and response.status_code < 300:
+            return True
+        else:
+            print(f"ERRO (send_email_via_api): SendGrid rejeitou email. Status: {response.status_code}, Detalhes: {response.text}")
+            return False
+    except requests.exceptions.Timeout:
+        print("ERRO (send_email_via_api): Requisição para SendGrid atingiu timeout.")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"ERRO (send_email_via_api): Falha de requisição para SendGrid: {e}")
+        return False
+    except Exception as e:
+        print(f"EXCEÇÃO INESPERADA (send_email_via_api): {e}")
+        return False
+    
+    
 # --- HELPER PARA ENVIAR EMAIL (sem mudanças) ---
 def enviar_email_status_reserva(request, reserva):
     if not reserva.usuario or not reserva.usuario.email:
