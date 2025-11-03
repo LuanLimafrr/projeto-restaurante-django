@@ -6,11 +6,13 @@ set -o errexit
 pip install -r requirements.txt
 
 # 2. Roda o collectstatic
-# (Isso vai coletar o CSS/JS E as imagens que você moveu para 'static/')
-python projetorestaurante/manage.py collectstatic --no-input
+# (Apontando para a pasta correta do manage.py)
+python projetorestaurante/projetorestaurante/manage.py collectstatic --no-input
 
-# 3. Roda as migrações (Cria as tabelas vazias no banco de dados do Render)
-python projetorestaurante/manage.py migrate --no-input
+# 3. Roda as migrações
+# (Apontando para a pasta correta do manage.py)
+python projetorestaurante/projetorestaurante/manage.py migrate --no-input
 
-# 4. Carrega os dados (CORREÇÃO APLICADA AQUI)
-python projetorestaurante/manage.py loaddata initial_data.json
+# 4. Carrega os dados
+# (O loaddata usa o manage.py como referência para encontrar o initial_data.json)
+python projetorestaurante/projetorestaurante/manage.py loaddata initial_data.json

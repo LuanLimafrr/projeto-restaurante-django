@@ -3,7 +3,13 @@ services:
     name: projeto-restaurante
     env: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn --chdir projetorestaurante restaurante.wsgi:application"
+    
+    # --- CORREÇÃO AQUI ---
+    # O --chdir (change directory) diz ao Gunicorn para rodar A PARTIR
+    # da pasta que contém o seu wsgi.py (restaurante/wsgi.py)
+    startCommand: "gunicorn --chdir projetorestaurante/projetorestaurante restaurante.wsgi:application"
+    # --- FIM DA CORREÇÃO ---
+
     plan: free
 
     envVars:

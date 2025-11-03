@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'fila',
     'cardapio',
+    'controle',
+    'clientes',
     'reservas',
     'comandas',
     'usuarios',
@@ -117,10 +119,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_ROOT = BASE_DIR.parent / 'staticfiles_coletados'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',# Onde o Django procura seus arquivos (projetorestaurante/static)
-    MEDIA_ROOT, 
+    BASE_DIR / 'static',
 ]
-# Caminho para onde o 'collectstatic' do build.sh vai copiar os arquivos
 
 
 # --- 1. CORREÇÃO DO CSS (Armazenamento Whitenoise) ---
