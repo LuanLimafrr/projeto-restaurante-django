@@ -12,5 +12,5 @@ python projetorestaurante/manage.py collectstatic --no-input
 # 3. Roda as migrações (Cria as tabelas vazias no banco de dados do Render)
 python projetorestaurante/manage.py migrate --no-input
 
-# 4. Carrega os dados (Popula as tabelas com seus dados locais do JSON)
-python projetorestaurante/manage.py loaddata projetorestaurante/initial_data.json
+# 4. Carrega os dados (CORREÇÃO APLICADA AQUI)
+python projetorestaurante/manage.py loaddata initial_data.json
