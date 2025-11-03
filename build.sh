@@ -2,17 +2,15 @@
 # exit on error
 set -o errexit
 
-# Instala as dependências do requirements.txt (que você moveu para a raiz)
+# 1. Instala as dependências
 pip install -r requirements.txt
 
-# Garante que as pastas MEDIA_ROOT e STATIC_ROOT existam antes de serem usadas
-# 'mkdir -p' cria a pasta se ela não existe, sem erro se já existe.
-mkdir -p projetorestaurante/restaurante/media
-mkdir -p staticfiles_coletados
-
-# Roda o collectstatic, que agora vai copiar também os arquivos de MEDIA_ROOT para STATIC_ROOT
+# 2. Roda o collectstatic
+# (Isso vai coletar o CSS/JS E as imagens que você moveu para 'static/')
 python projetorestaurante/manage.py collectstatic --no-input
 
-# Roda as migrações do banco de dados
-python projetorestaurante/manage.py migrate
+# 3. Roda as migrações (Cria as tabelas vazias no banco de dados do Render)
+python projetorestaurante/manage.py migrate --no-input
 
+# 4. Carrega os dados (Popula as tabelas com seus dados locais do JSON)
+python projetorestaurante/manage.py loaddata projetorestaurante/initial_data.json

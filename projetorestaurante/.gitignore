@@ -11,15 +11,11 @@ db.sqlite3
 *.pyc
 __pycache__/
 
-# Arquivos de Mídia e Estáticos (do usuário)
-# ATENÇÃO: Se sua pasta de 'static' local (onde você salva seu CSS)
-# NÃO se chama 'static', mude o nome abaixo.
-# Mas a pasta 'staticfiles' (criada pelo 'collectstatic') deve ser ignorada.
-media/
+# Arquivos de Estáticos (do usuário)
+# A pasta 'staticfiles' (criada pelo 'collectstatic') deve ser ignorada.
 staticfiles/
 
 # Arquivos de Log e IDE
 *.log
 .vscode/
 .idea/
-restaurante/settings.py
