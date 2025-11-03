@@ -2,9 +2,10 @@
 # exit on error
 set -o errexit
 
-# Instala dependências (o requirements.txt está na subpasta)
-pip install -r projetorestaurante/requirements.txt
+# CORRIGIDO: Agora lê o requirements.txt da pasta raiz (onde ele está agora)
+pip install -r requirements.txt
 
-# Roda os comandos (o manage.py está na subpasta)
+# Os comandos do manage.py AINDA estão na subpasta 'projetorestaurante'
 python projetorestaurante/manage.py collectstatic --no-input
 python projetorestaurante/manage.py migrate
+
