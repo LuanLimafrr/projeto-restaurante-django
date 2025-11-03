@@ -110,10 +110,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static', # Onde o Django procura seus arquivos (projetorestaurante/static)
+    BASE_DIR / 'static',# Onde o Django procura seus arquivos (projetorestaurante/static)
+    MEDIA_ROOT, 
 ]
 # Caminho para onde o 'collectstatic' do build.sh vai copiar os arquivos
-STATIC_ROOT = BASE_DIR.parent / 'staticfiles_coletados' 
+STATIC_ROOT = BASE_DIR.parent / 'staticfiles_coletados'
 
 # --- 1. CORREÇÃO DO CSS (Armazenamento Whitenoise) ---
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

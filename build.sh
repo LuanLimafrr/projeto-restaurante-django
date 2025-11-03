@@ -2,10 +2,17 @@
 # exit on error
 set -o errexit
 
-# CORRIGIDO: Agora lê o requirements.txt da pasta raiz (onde ele está agora)
+# Instala as dependências do requirements.txt (que você moveu para a raiz)
 pip install -r requirements.txt
 
-# Os comandos do manage.py AINDA estão na subpasta 'projetorestaurante'
+# Garante que as pastas MEDIA_ROOT e STATIC_ROOT existam antes de serem usadas
+# 'mkdir -p' cria a pasta se ela não existe, sem erro se já existe.
+mkdir -p projetorestaurante/restaurante/media
+mkdir -p staticfiles_coletados
+
+# Roda o collectstatic, que agora vai copiar também os arquivos de MEDIA_ROOT para STATIC_ROOT
 python projetorestaurante/manage.py collectstatic --no-input
+
+# Roda as migrações do banco de dados
 python projetorestaurante/manage.py migrate
 
