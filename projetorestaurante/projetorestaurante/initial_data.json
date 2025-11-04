@@ -1,0 +1,67 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$RhAhWl4AJ68idnBPL4oBz5$h4GXliOSsls+BZgLw1o4oiyDawyt+R03BO/tbrG1PQg=",
+    "last_login": "2025-11-03T21:49:03.232Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@admin.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2025-11-03T21:48:44.504Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "cardapio.categoria",
+  "pk": 1,
+  "fields": {
+    "nome": "Pratos Principais"
+  }
+},
+{
+  "model": "cardapio.categoria",
+  "pk": 2,
+  "fields": {
+    "nome": "Drinks"
+  }
+},
+{
+  "model": "cardapio.categoria",
+  "pk": 3,
+  "fields": {
+    "nome": "Acompanhamentos"
+  }
+},
+{
+  "model": "cardapio.categoria",
+  "pk": 4,
+  "fields": {
+    "nome": "Bebidas"
+  }
+},
+{
+  "model": "cardapio.categoria",
+  "pk": 5,
+  "fields": {
+    "nome": "Entradas"
+  }
+},
+{
+  "model": "cardapio.itemcardapio",
+  "pk": 1,
+  "fields": {
+    "nome": "Bife Acebolado",
+    "descricao": "",
+    "preco": "79.90",
+    "imagem": "pratos/bifeaceboladogrelhado.jpg",
+    "categoria": 1,
+    "ativo": true,
+    "item_estoque": null
+  }
+}
+]
