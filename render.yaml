@@ -4,9 +4,9 @@ services:
     env: python
     buildCommand: "./build.sh"
     
-    # --chdir diz ao Gunicorn para entrar na pasta 'projetorestaurante'
-    # antes de procurar o 'restaurante.wsgi'
-    startCommand: "gunicorn --chdir projetorestaurante restaurante.wsgi:application"
+    # --- CORREÇÃO AQUI ---
+    # --chdir diz ao Gunicorn para entrar nesta pasta antes de rodar
+    startCommand: "gunicorn --chdir projetorestaurante/projetorestaurante restaurante.wsgi:application"
     
     plan: free
 
