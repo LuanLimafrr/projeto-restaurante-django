@@ -1,0 +1,21 @@
+# Arquivos de Ambiente Virtual
+venv/
+*.env
+.env
+
+# Arquivos de Banco de Dados
+*.sqlite3
+db.sqlite3
+
+# Arquivos de Cache do Python
+*.pyc
+__pycache__/
+
+# Arquivos de Estáticos (do usuário)
+# A pasta 'staticfiles' (criada pelo 'collectstatic') deve ser ignorada.
+staticfiles/
+
+# Arquivos de Log e IDE
+*.log
+.vscode/
+.idea/
