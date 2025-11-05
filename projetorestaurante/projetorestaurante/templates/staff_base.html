@@ -8,22 +8,7 @@
             
             {% comment %}
             ******************************************************************
-            * Bloco de Links que SÓ O GRUPO 'Gerente' pode ver
-            ******************************************************************
-            {% endcomment %}
-            {% if request.user|has_group:"Gerente" %}
-                
-                <a href="{% url 'mapa_mesas' %}"
-                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if request.resolver_match.view_name == 'mapa_mesas' %}active{% endif %}">
-                    <span><i class="bi bi-grid-3x3-gap me-2"></i>PDV Mesas</span>
-                </a>
-            
-            {% endif %}
-
-            
-            {% comment %}
-            ******************************************************************
-            * Links que AMBOS (Gerente e Recepcionista) podem ver
+            * Links que TODO O STAFF (incluindo Recepcionista) pode ver
             ******************************************************************
             {% endcomment %}
             
@@ -33,27 +18,27 @@
                 {% if fila_pendente_count > 0 %}<span class="badge bg-danger rounded-pill">{{ fila_pendente_count }}</span>{% endif %}
             </a>
             
-            <a href="{% url 'gerenciar_reservas' %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'gerenciar_reservas' in request.resolver_match.view_name or 'historico_reservas' in request.resolver_match.view_name %}active{% endif %}">
-                <span><i class="bi bi-calendar3 me-2"></i>Gerenciar Reservas</span>
-                {% if reservas_pendente_count > 0 %}<span class="badge bg-danger rounded-pill">{{ reservas_pendente_count }}</span>{% endif %}
-            </a>
-
-            <a href="{% url 'gerenciar_cardapio' %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'cardapio' in request.resolver_match.app_name and 'exibir_cardapio' not in request.resolver_match.view_name %}active{% endif %}">
-                <span><i class="bi bi-pencil-square me-2"></i>Gerenciar Cardápio</span>
-            </a>
-
             {% comment %}
             ******************************************************************
             * Bloco de Links que SÓ O GRUPO 'Gerente' pode ver
             ******************************************************************
             {% endcomment %}
             {% if request.user|has_group:"Gerente" %}
-                
-                <a href="{% url 'gerenciar_estoque' %}"
-                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'estoque' in request.resolver_match.app_name %}active{% endif %}">
-                    <span><i class="bi bi-box-seam me-2"></i>Gerenciar Estoque</span>
+
+                <a href="{% url 'mapa_mesas' %}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if request.resolver_match.view_name == 'mapa_mesas' %}active{% endif %}">
+                    <span><i class="bi bi-grid-3x3-gap me-2"></i>PDV Mesas</span>
+                </a>
+            
+                <a href="{% url 'gerenciar_reservas' %}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'gerenciar_reservas' in request.resolver_match.view_name or 'historico_reservas' in request.resolver_match.view_name %}active{% endif %}">
+                    <span><i class="bi bi-calendar3 me-2"></i>Gerenciar Reservas</span>
+                    {% if reservas_pendente_count > 0 %}<span class="badge bg-danger rounded-pill">{{ reservas_pendente_count }}</span>{% endif %}
+                </a>
+
+                <a href="{% url 'gerenciar_cardapio' %}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if 'cardapio' in request.resolver_match.app_name and 'exibir_cardapio' not in request.resolver_match.view_name %}active{% endif %}">
+                    <span><i class="bi bi-pencil-square me-2"></i>Gerenciar Cardápio</span>
                 </a>
                 
                 <a href="{% url 'relatorio_diario' %}"
@@ -62,6 +47,12 @@
                 </a>
 
             {% endif %}
+            
+            {% comment %}
+            ******************************************************************
+            * FIM DOS BLOCOS DE LINKS
+            ******************************************************************
+            {% endcomment %}
 
         </div>
     </div>

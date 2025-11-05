@@ -9,6 +9,7 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 
 # --- IMPORTAÇÃO NECESSÁRIA ---
+# Importamos a função que verifica se o usuário está no grupo 'Gerente'
 from cardapio.views import is_gerente 
 
 # --- VIEW DE REGISTRO (Sem mudanças) ---
@@ -27,14 +28,14 @@ def registrar(request):
 # --- VIEW DE PERFIL (ATUALIZADA) ---
 @login_required
 def perfil(request):
-    # --- CORREÇÃO AQUI ---
+    # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
     # Se for staff E NÃO for superusuário, redireciona para o dashboard
     if request.user.is_staff and not request.user.is_superuser:
         if is_gerente(request.user):
             return redirect('mapa_mesas') # Gerente vai para o PDV Mesas
         else:
             return redirect('gerenciar_fila') # Recepcionista (ou outro staff) vai para a Fila
-    # --- FIM DA CORREÇÃO ---
+    # --- FIM DA LÓGICA ---
     
     # Mostra perfil do cliente (ou do Superusuário)
     return render(request, 'usuarios/perfil.html')
@@ -48,7 +49,7 @@ class CustomLoginViewUnificada(LoginView):
         next_url = self.request.GET.get('next')
         if next_url: return next_url # Respeita o parâmetro ?next=
 
-        # --- CORREÇÃO AQUI ---
+        # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
         # Se for staff E NÃO for superusuário, redireciona para o dashboard
         if self.request.user.is_staff and not self.request.user.is_superuser:
             if is_gerente(self.request.user):
@@ -58,7 +59,7 @@ class CustomLoginViewUnificada(LoginView):
         else:
             # Cliente OU Superusuário vão para o perfil/site normal
             return reverse_lazy('perfil') 
-        # --- FIM DA CORREÇÃO ---
+        # --- FIM DA LÓGICA ---
 
     def form_invalid(self, form):
         messages.error(self.request, "Usuário ou senha inválidos.")

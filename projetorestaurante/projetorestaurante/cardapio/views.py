@@ -30,9 +30,9 @@ def exibir_cardapio(request):
 
 # --- VIEWS DE GERENCIAMENTO ---
 
-# Esta view (listar) pode ser vista por TODOS OS STAFF (Recepcionista e Gerente)
+# Esta view (listar) SÓ PODE SER VISTA PELO GERENTE
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- MUDANÇA AQUI
 def listar_cardapio_admin(request):
     """Lista TODAS as categorias e itens (ativos e inativos) para o admin."""
     categorias = Categoria.objects.all().prefetch_related('itens').order_by('nome')
@@ -144,9 +144,9 @@ def atualizar_preco_item(request, id):
         messages.warning(request, "Nenhum novo preço fornecido.")
     return redirect('gerenciar_cardapio')
 
-# Esta view (toggle) pode ser vista por TODOS OS STAFF (Recepcionista e Gerente)
+# Esta view (toggle) SÓ PODE SER VISTA PELO GERENTE
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- MUDANÇA AQUI
 def toggle_ativo_item(request, id):
     item = get_object_or_404(ItemCardapio, id=id)
     item.ativo = not item.ativo # Inverte o valor booleano

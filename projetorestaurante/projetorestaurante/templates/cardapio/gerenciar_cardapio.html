@@ -7,13 +7,13 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h4 mb-0">Gerenciar Visibilidade do Cardápio</h2>
         {# Ajuste 'mapa_mesas' se o seu link principal de staff for outro #}
-        <a href="{% url 'mapa_mesas' %}" class="btn btn-secondary">← VOLTAR AO PAINEL PRINCIPAL</a>
+        <a href="{% url 'mapa_mesas' %}" class="btn btn-secondary">← VOLTAR AO PAINEL PRINCIPAL</a> 
     </div>
 
     <div class="alert alert-info">
         <i class="bi bi-info-circle-fill me-2"></i>
         Use esta página para ativar ou desativar itens do cardápio rapidamente. 
-        Para adicionar, editar ou deletar itens e categorias, use o painel do Superusuário.
+        Para adicionar ou editar itens, use o painel do Superusuário (/admin).
     </div>
 
     {% if messages %}
@@ -33,8 +33,7 @@
                 <div class="card bg-dark text-white shadow-sm h-100">
                     <div class="card-header bg-darker d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">{{ categoria.nome }}</h5>
-                        
-                        </div>
+                    </div>
                     
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
@@ -56,8 +55,7 @@
                                                 <i class="bi bi-eye-slash-fill"></i> Oculto
                                             </a>
                                         {% endif %}
-
-                                        </div>
+                                    </div>
                                 </li>
                             {% empty %}
                                 <li class="list-group-item bg-dark text-muted">Nenhum item nesta categoria.</li>
