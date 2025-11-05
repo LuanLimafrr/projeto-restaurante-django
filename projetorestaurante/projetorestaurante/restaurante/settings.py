@@ -113,7 +113,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Configuração de arquivos de Mídia (uploads dos usuários)
-MEDIA_URL = '/media/'
+MEDIA_URL = '/static/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_ROOT = BASE_DIR.parent / 'staticfiles_coletados'
