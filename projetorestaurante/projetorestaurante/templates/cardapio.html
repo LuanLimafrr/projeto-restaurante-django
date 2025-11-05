@@ -17,7 +17,7 @@
                     <div class="card card-custom h-100"> {# h-100 para mesma altura #}
                         
                         {% if item.imagem %}
-                            <img src="{{ item.imagem.url }}" class="card-img-top" alt="{{ item.nome }}" style="height: 250px; object-fit: cover;">
+                            <img src="{{ static item.imagem.url }}" class="card-img-top" alt="{{ item.nome }}" style="height: 250px; object-fit: cover;">
                         {% else %}
                             <img src="{% static 'img/placeholder.png' %}" class="card-img-top" alt="Imagem não disponível" style="height: 250px; object-fit: cover; opacity: 0.7;">
                         {% endif %}
