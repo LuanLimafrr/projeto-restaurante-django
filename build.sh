@@ -8,15 +8,14 @@ pip install -r requirements.txt
 # 2. Roda o collectstatic
 python projetorestaurante/projetorestaurante/manage.py collectstatic --no-input
 
-# 3. Roda as migrações (Cria as tabelas)
+# 3. Roda as migrações (Cria/Atualiza as tabelas)
+# ESTE É O ÚNICO COMANDO DE DADOS QUE DEVE RODAR SEMPRE
 python projetorestaurante/projetorestaurante/manage.py migrate --no-input
 
-# 4. LIMPA o banco de dados
-python projetorestaurante/projetorestaurante/manage.py flush --no-input
+# 4. LINHA 'FLUSH' REMOVIDA (NÃO VAMOS MAIS APAGAR O BANCO)
+# 5. LINHA 'LOADDATA' REMOVIDA (OS DADOS JÁ ESTÃO LÁ)
+# 6. LINHA 'CREATESUPERUSER' REMOVIDA (O SUPERUSER JÁ ESTÁ LÁ)
 
-# 5. Carrega os dados do Cardápio
-python projetorestaurante/projetorestaurante/manage.py loaddata projetorestaurante/projetorestaurante/initial_data.json
-
-# 6. CRIA O SUPERUSUÁRIO (ESTE É O COMANDO QUE FALTAVA)
-# (Usa as variáveis que você configurou no Render)
-python projetorestaurante/projetorestaurante/manage.py createsuperuser --noinput
+# Se você precisar criar o superusuário de novo (ex: se apagar o DB no Render), 
+# descomente a linha abaixo TEMPORARIAMENTE para UM deploy:
+# python projetorestaurante/projetorestaurante/manage.py createsuperuser --noinput
