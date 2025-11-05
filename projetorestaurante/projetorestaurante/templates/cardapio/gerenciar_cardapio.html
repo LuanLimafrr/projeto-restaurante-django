@@ -1,62 +1,104 @@
-{% extends "staff_base.html" %}
+{% extends 'staff_base.html' %}
 {% load static %}
-
-{% block title %}Gerenciar Cardápio{% endblock %}
+{% load auth_extras %} {% block title %}Gerenciar Cardápio{% endblock %}
 
 {% block main_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Gerenciar Cardápio</h2>
-    <div>
-        <a href="{% url 'adicionar_categoria' %}" class="btn btn-sm btn-outline-primary me-2">Nova Categoria</a>
-        <a href="{% url 'adicionar_item' %}" class="btn btn-sm btn-primary">Novo Item</a>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Gerenciar Visibilidade do Cardápio</h2>
+        {# Ajuste 'mapa_mesas' se o seu link principal de staff for outro #}
+        <a href="{% url 'mapa_mesas' %}" class="btn btn-secondary">← VOLTAR AO PAINEL PRINCIPAL</a> 
     </div>
-</div>
 
-{% for categoria in categorias %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{{ categoria.nome }}</h5>
-        <div>
-            <a href="{% url 'editar_categoria' categoria.id %}" class="btn btn-sm btn-outline-secondary">Editar Cat.</a>
-            <a href="{% url 'deletar_categoria' categoria.id %}" class="btn btn-sm btn-outline-danger">Deletar Cat.</a>
-        </div>
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Use esta página para ativar ou desativar itens do cardápio rapidamente. 
+        {% if not request.user|has_group:"Gerente" %}
+            Para adicionar ou editar itens, contate seu Gerente.
+        {% endif %}
     </div>
-    <div class="card-body p-0">
-        {% if categoria.itens.all %}
-        <ul class="list-group list-group-flush">
-            {% for item in categoria.itens.all %}
-            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center">
-                <div class="me-3 mb-2 mb-md-0">
-                    {% if item.imagem %}
-                        <img src="{{ item.imagem.url }}" alt="{{ item.nome }}" width="50" height="50" class="me-2 rounded object-fit-cover float-start">
-                    {% endif %}
-                    <strong style="{% if not item.ativo %}text-decoration: line-through; color: grey;{% endif %}">{{ item.nome }}</strong>
-                    {% if not item.ativo %} <span class="badge bg-secondary ms-1">Inativo</span> {% endif %}
-                    <small class="d-block text-muted">{{ item.descricao|truncatewords:10 }}</small>
-                    <span class="d-block mt-1">Preço Atual: R$ {{ item.preco|stringformat:".2f" }}</span>
+
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div class="d-flex align-items-center flex-wrap gap-2">
-                    <form method="POST" action="{% url 'atualizar_preco_item' item.id %}" class="d-inline-flex align-items-center me-2">
-                        {% csrf_token %}
-                        <label for="preco-{{ item.id }}" class="form-label visually-hidden">Novo Preço</label>
-                        <input type="number" name="novo_preco" value="{{ item.preco }}" step="0.01" class="form-control form-control-sm" style="width: 90px;" id="preco-{{ item.id }}" required>
-                        <button type="submit" class="btn btn-sm btn-outline-success ms-1" title="Salvar Preço"><i class="bi bi-check-lg"></i></button>
-                    </form>
-                    <a href="{% url 'toggle_ativo_item' item.id %}" class="btn btn-sm {% if item.ativo %}btn-outline-warning{% else %}btn-outline-success{% endif %}" title="{% if item.ativo %}Desativar{% else %}Ativar{% endif %}">
-                        {% if item.ativo %}<i class="bi bi-eye-slash"></i>{% else %}<i class="bi bi-eye"></i>{% endif %}
-                    </a>
-                    <a href="{% url 'editar_item' item.id %}" class="btn btn-sm btn-outline-secondary" title="Editar Completo"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'deletar_item' item.id %}" class="btn btn-sm btn-outline-danger" title="Deletar"><i class="bi bi-trash"></i></a>
-                </div>
-            </li>
             {% endfor %}
-        </ul>
-        {% else %} <p class="text-muted text-center p-3 mb-0">Nenhum item nesta categoria.</p> {% endif %}
-    </div>
-</div>
-{% empty %} <p class="text-muted text-center">Nenhuma categoria cadastrada. Comece adicionando uma!</p> {% endfor %}
+        </div>
+    {% endif %}
 
-<div class="mt-4 mb-3">
-    <a href="{% url 'inicio' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao Painel Principal</a>
+    {% if request.user|has_group:"Gerente" %}
+    <div class="mb-4">
+        <a href="{% url 'adicionar_categoria' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle-fill me-2"></i>Nova Categoria
+        </a>
+        <a href="{% url 'adicionar_item' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle-fill me-2"></i>Novo Item
+        </a>
+    </div>
+    {% endif %}
+
+
+    <div class="row">
+        {% for categoria in categorias %}
+            <div class="col-lg-6 mb-4">
+                <div class="card bg-dark text-white shadow-sm h-100">
+                    <div class="card-header bg-darker d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ categoria.nome }}</h5>
+                        
+                        {% if request.user|has_group:"Gerente" %}
+                        <div>
+                            <a href="{% url 'editar_categoria' categoria.id %}" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <a href="{% url 'deletar_categoria' categoria.id %}" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-trash-fill"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for item in categoria.itens.all %}
+                                <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ item.nome }}</strong>
+                                        <br>
+                                        <small class="text-muted">R$ {{ item.preco|floatformat:2 }}</small>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        {% if item.ativo %}
+                                            <a href="{% url 'toggle_ativo_item' item.id %}" class="btn btn-success btn-sm" title="Item está Vísivel. Clique para desativar.">
+                                                <i class="bi bi-eye-fill"></i> Ativo
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'toggle_ativo_item' item.id %}" class="btn btn-outline-danger btn-sm" title="Item está Oculto. Clique para ativar.">
+                                                <i class="bi bi-eye-slash-fill"></i> Oculto
+                                            </a>
+                                        {% endif %}
+
+                                        {% if request.user|has_group:"Gerente" %}
+                                            <a href="{% url 'editar_item' item.id %}" class="btn btn-outline-info btn-sm ms-2">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </a>
+                                            <a href="{% url 'deletar_item' item.id %}" class="btn btn-outline-danger btn-sm ms-1">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item bg-dark text-muted">Nenhum item nesta categoria.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

@@ -6,30 +6,31 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .forms import CategoriaForm, ItemCardapioForm
 from django.urls import reverse_lazy
-# --- NOVOS IMPORTS ---
-from django.views.decorators.http import require_POST # Para garantir POST nas ações
-from django.db.models import Prefetch # Para filtrar itens ativos na view pública
-from decimal import Decimal, InvalidOperation # Para validar preço
+from django.views.decorators.http import require_POST
+from django.db.models import Prefetch
+from decimal import Decimal, InvalidOperation
 
-# --- HELPER STAFF ---
-def is_staff_user(user): return user.is_staff
+# --- HELPER STAFF (FUNÇÕES DE CHECAGEM DE GRUPO) ---
+def is_staff_user(user):
+    """Verifica se o usuário é QUALQUER tipo de staff (Recepcionista OU Gerente)"""
+    return user.is_authenticated and user.is_staff
 
-# --- View Pública (ATUALIZADA) ---
+def is_gerente(user):
+    """Verifica se o usuário é especificamente do grupo 'Gerente'"""
+    return user.is_staff and user.groups.filter(name='Gerente').exists()
+
+# --- View Pública (sem mudanças) ---
 def exibir_cardapio(request):
-    """Exibe o cardápio público, mostrando apenas itens ativos."""
     categorias = Categoria.objects.prefetch_related(
-        # Filtra os itens DENTRO do prefetch para pegar só os ativos
         Prefetch('itens', queryset=ItemCardapio.objects.filter(ativo=True).order_by('nome'))
-    ).order_by('nome') # Ordena as categorias
-
-    # Filtra categorias que ficaram sem nenhum item ativo após o prefetch
+    ).order_by('nome')
     categorias_com_itens = [cat for cat in categorias if cat.itens.all()]
-
     contexto = {'categorias': categorias_com_itens}
     return render(request, 'cardapio.html', contexto)
 
 # --- VIEWS DE GERENCIAMENTO ---
 
+# Esta view (listar) pode ser vista por TODOS OS STAFF (Recepcionista e Gerente)
 @login_required
 @user_passes_test(is_staff_user, login_url='inicio')
 def listar_cardapio_admin(request):
@@ -38,9 +39,9 @@ def listar_cardapio_admin(request):
     contexto = {'categorias': categorias}
     return render(request, 'cardapio/gerenciar_cardapio.html', contexto)
 
-# --- Categorias (sem mudanças) ---
+# --- Categorias (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def adicionar_categoria(request):
     if request.method == 'POST':
         form = CategoriaForm(request.POST)
@@ -48,14 +49,14 @@ def adicionar_categoria(request):
             try:
                 form.save(); messages.success(request, f"Categoria '{form.cleaned_data['nome']}' adicionada.")
                 return redirect('gerenciar_cardapio')
-            except Exception as e: # Captura erro de 'unique'
-                 messages.error(request, f"Erro ao adicionar categoria: {e}")
+            except Exception as e: 
+                messages.error(request, f"Erro ao adicionar categoria: {e}")
         else: messages.error(request, "Erro no formulário.")
     else: form = CategoriaForm()
     return render(request, 'cardapio/categoria_form.html', {'form': form, 'titulo': 'Adicionar Categoria'})
 
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def editar_categoria(request, id):
     categoria = get_object_or_404(Categoria, id=id)
     if request.method == 'POST':
@@ -70,21 +71,21 @@ def editar_categoria(request, id):
     return render(request, 'cardapio/categoria_form.html', {'form': form, 'titulo': f'Editar: {categoria.nome}'})
 
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def deletar_categoria(request, id):
     categoria = get_object_or_404(Categoria, id=id)
     if request.method == 'POST':
         nome_deletado = categoria.nome
         if categoria.itens.exists():
-             messages.error(request, f"Não é possível deletar '{nome_deletado}', pois contém itens.")
+            messages.error(request, f"Não é possível deletar '{nome_deletado}', pois contém itens.")
         else:
             categoria.delete(); messages.success(request, f"Categoria '{nome_deletado}' deletada.")
         return redirect('gerenciar_cardapio')
     return render(request, 'cardapio/confirm_delete.html', {'objeto': categoria, 'tipo': 'Categoria'})
 
-# --- Itens do Cardápio ---
+# --- Itens do Cardápio (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def adicionar_item(request):
     if request.method == 'POST':
         form = ItemCardapioForm(request.POST, request.FILES)
@@ -96,7 +97,7 @@ def adicionar_item(request):
     return render(request, 'cardapio/item_form.html', {'form': form, 'titulo': 'Adicionar Item', 'enctype': 'multipart/form-data'})
 
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def editar_item(request, id):
     item = get_object_or_404(ItemCardapio, id=id)
     if request.method == 'POST':
@@ -109,7 +110,7 @@ def editar_item(request, id):
     return render(request, 'cardapio/item_form.html', {'form': form, 'titulo': f'Editar: {item.nome}', 'enctype': 'multipart/form-data', 'item': item})
 
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def deletar_item(request, id):
     item = get_object_or_404(ItemCardapio, id=id)
     if request.method == 'POST':
@@ -119,19 +120,16 @@ def deletar_item(request, id):
     return render(request, 'cardapio/confirm_delete.html', {'objeto': item, 'tipo': 'Item'})
 
 
-# --- NOVAS VIEWS DE AÇÃO ---
-
+# --- Ações Rápidas (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
-@require_POST # Garante que esta view só aceita POST
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@require_POST
 def atualizar_preco_item(request, id):
     item = get_object_or_404(ItemCardapio, id=id)
     novo_preco_str = request.POST.get('novo_preco')
-
     if novo_preco_str:
         try:
-            # Tenta converter para Decimal e valida se é positivo
-            novo_preco = Decimal(novo_preco_str.replace(',', '.')) # Aceita vírgula ou ponto
+            novo_preco = Decimal(novo_preco_str.replace(',', '.'))
             if novo_preco >= 0:
                 item.preco = novo_preco
                 item.save()
@@ -141,16 +139,14 @@ def atualizar_preco_item(request, id):
         except InvalidOperation:
             messages.error(request, "Valor de preço inválido.")
         except Exception as e:
-             messages.error(request, f"Erro ao atualizar preço: {e}")
+            messages.error(request, f"Erro ao atualizar preço: {e}")
     else:
         messages.warning(request, "Nenhum novo preço fornecido.")
-
     return redirect('gerenciar_cardapio')
 
-
+# Esta view (toggle) pode ser vista por TODOS OS STAFF (Recepcionista e Gerente)
 @login_required
 @user_passes_test(is_staff_user, login_url='inicio')
-# Não precisa @require_POST aqui, pois o link GET é seguro (só muda um booleano)
 def toggle_ativo_item(request, id):
     item = get_object_or_404(ItemCardapio, id=id)
     item.ativo = not item.ativo # Inverte o valor booleano

@@ -1,7 +1,6 @@
 # Arquivo: comandas/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
-# --- CORREÇÃO AQUI: Adicionado user_passes_test ---
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import models
 from django.db import transaction
@@ -14,14 +13,12 @@ from django.db.models import Sum, Count, Case, When, F
 from decimal import Decimal
 import datetime
 from datetime import timedelta
-# --- CORREÇÃO AQUI: Importar a função de checagem ---
-from cardapio.views import is_staff_user # Assumindo que está em cardapio/views.py
-# (Se 'is_staff_user' não estiver em cardapio/views.py, descomente a linha abaixo)
-# def is_staff_user(user): return user.is_staff
+# --- IMPORTAÇÕES DE PERMISSÃO CORRIGIDAS ---
+from cardapio.views import is_gerente, is_staff_user 
 
-# --- VIEW PRINCIPAL DO STAFF (sem mudanças) ---
+# --- VIEW PRINCIPAL DO STAFF (PDV MESAS) - SÓ GERENTE ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio') # Agora 'user_passes_test' está importado
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def mapa_mesas(request):
     if not request.user.is_staff: return redirect('inicio')
     cliente_id_para_alocar = request.GET.get('alocar_cliente_id')
@@ -37,9 +34,9 @@ def mapa_mesas(request):
     contexto = { 'mesas': mesas, 'clientes_aguardando': clientes_aguardando, 'proximo_cliente': proximo_cliente, 'cliente_a_alocar': cliente_a_alocar, }
     return render(request, 'comandas/dashboard_staff.html', contexto)
 
-# --- VIEW PARA PROCESSAR A ALOCAÇÃO (sem mudanças) ---
+# --- VIEW PARA PROCESSAR A ALOCAÇÃO (TODO STAFF PODE FAZER) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_staff_user, login_url='inicio') # <-- TODO STAFF
 def processar_alocacao_cliente(request, id_mesa, id_cliente):
     if not request.user.is_staff: return redirect('inicio')
     mesa = get_object_or_404(Mesa, id=id_mesa)
@@ -54,9 +51,9 @@ def processar_alocacao_cliente(request, id_mesa, id_cliente):
         messages.warning(request, "Não foi possível alocar: Mesa não está livre ou cliente não está mais aguardando.")
         return redirect('mapa_mesas')
 
-# --- VIEW DETALHE COMANDA (sem mudanças) ---
+# --- VIEW DETALHE COMANDA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def detalhe_comanda(request, id_mesa):
     if not request.user.is_staff: return redirect('inicio')
     mesa = get_object_or_404(Mesa, id=id_mesa)
@@ -67,8 +64,8 @@ def detalhe_comanda(request, id_mesa):
         if form.is_valid():
             item_sel = form.cleaned_data['item_cardapio']; qtd = form.cleaned_data['quantidade']; obs = form.cleaned_data.get('observacao')
             if item_sel.item_estoque and item_sel.item_estoque.quantidade_atual < qtd:
-                 messages.error(request, f"Estoque insuficiente para '{item_sel.nome}'. Restam {item_sel.item_estoque.quantidade_atual} un.")
-                 form_invalido = form
+                messages.error(request, f"Estoque insuficiente para '{item_sel.nome}'. Restam {item_sel.item_estoque.quantidade_atual} un.")
+                form_invalido = form
             else:
                 ItemComanda.objects.create(comanda=comanda_ativa, item_cardapio=item_sel, quantidade=qtd, observacao=obs)
                 messages.success(request, f"Item '{item_sel.nome}' adicionado.")
@@ -79,9 +76,9 @@ def detalhe_comanda(request, id_mesa):
     contexto = { 'mesa': mesa, 'comanda': comanda_ativa, 'itens_da_comanda': itens_da_comanda, 'form': form_para_template }
     return render(request, 'comandas/detalhe_comanda.html', contexto)
 
-# --- VIEW FECHAR CONTA / GERAR NOTA (ATUALIZADA) ---
+# --- VIEW FECHAR CONTA / GERAR NOTA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def fechar_comanda(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -101,10 +98,10 @@ def fechar_comanda(request, id_comanda):
     messages.warning(request, "Esta comanda não está mais aguardando pagamento.")
     return redirect('mapa_mesas')
 
-# --- VIEW CONFIRMAR PAGAMENTO (sem mudanças) ---
+# --- VIEW CONFIRMAR PAGAMENTO (SÓ GERENTE) ---
 @login_required
 @transaction.atomic
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def confirmar_pagamento(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -132,16 +129,16 @@ def confirmar_pagamento(request, id_comanda):
     messages.info(request, "Esta comanda não está aguardando pagamento.")
     return redirect('mapa_mesas')
 
-# ...(resto das views: remover_item, toggle_taxa, aumentar/diminuir - SEM MUDANÇAS)...
+# --- AÇÕES DE ITEM NA COMANDA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def remover_item_comanda(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda; id_mesa_redirect = comanda_pai.mesa.id
     if comanda_pai.status == 'ABERTA': nome_item = item.item_cardapio.nome; item.delete(); messages.warning(request, f"Item '{nome_item}' removido.")
     return redirect('detalhe_comanda', id_mesa=id_mesa_redirect)
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def toggle_taxa_servico(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -150,14 +147,14 @@ def toggle_taxa_servico(request, id_comanda):
         status_taxa = "incluída" if comanda.incluir_taxa_servico else "removida"; messages.info(request, f"Taxa {status_taxa}.")
     return redirect('detalhe_comanda', id_mesa=comanda.mesa.id)
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def aumentar_quantidade_item(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda
     if comanda_pai.status == 'ABERTA': item.quantidade += 1; item.save()
     return redirect('detalhe_comanda', id_mesa=comanda_pai.mesa.id)
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def diminuir_quantidade_item(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda
@@ -166,9 +163,9 @@ def diminuir_quantidade_item(request, id_item):
         else: nome_item = item.item_cardapio.nome; item.delete(); messages.warning(request, f"Item '{nome_item}' removido.")
     return redirect('detalhe_comanda', id_mesa=comanda_pai.mesa.id)
 
-# --- VIEW DE RELATÓRIO (sem mudanças) ---
+# --- VIEW DE RELATÓRIO (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio')
+@user_passes_test(is_gerente, login_url='inicio') # <-- JÁ ESTAVA CORRETO
 def relatorio_diario(request):
     if not request.user.is_staff: return redirect('inicio')
     hoje = timezone.now().date(); periodo = request.GET.get('periodo', 'hoje')
