@@ -20,5 +20,6 @@ staticfiles/
 .vscode/
 .idea/
 
-# Configuração do Django (NÃO ENVIAR O settings.py)
+# Configuração do Django 
+
 settings.py
