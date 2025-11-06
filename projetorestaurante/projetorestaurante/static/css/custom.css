@@ -75,6 +75,15 @@ body.theme-client { background-color: var(--cliente-bg); color: var(--cliente-te
 .theme-client .btn-outline-light { color: #f8f9fa; border-color: #f8f9fa; } .theme-client .btn-outline-light:hover { color: #000; background-color: #f8f9fa; border-color: #f8f9fa;}
 .theme-client .card { background-color: var(--cliente-card-bg); border: 1px solid var(--cliente-border); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
 .theme-client .card-title { color: var(--cliente-destaque); font-weight: 700; }
+
+/* ----- CORREÇÃO PARA DESCRIÇÃO DO CARDÁPIO ----- */
+.theme-client .card-text {
+    color: var(--cliente-texto) !important; /* Garante que a descrição seja legível */
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+/* ----- FIM DA CORREÇÃO ----- */
+
 .theme-client .list-group-item { background-color: transparent; border-color: var(--cliente-border); color: var(--cliente-texto); }
 .theme-client .alert { border: none; border-left: 5px solid; opacity: 0.95; }
 .theme-client .alert-success { border-left-color: #7a8c71; background-color: #2a3b2a; color: #c3d1bc; }
