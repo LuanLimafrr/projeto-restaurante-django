@@ -5,20 +5,18 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-body">
+        <div class="card shadow-sm" style="background-color: #fdfaf6; border: 1px solid #eee;">
+            <div class="card-body p-4 p-md-5">
                 <h2 class="card-title text-center mb-4" style="color: #8B4513;">Solicitar Reserva</h2>
                 
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="alert alert-success" role="alert">
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">
                             {{ message }}
                         </div>
                     {% endfor %}
-                    <a href="{% url 'inicio' %}" class="btn btn-secondary w-100 mb-3">Voltar à Página Inicial</a>
-                
-                {% else %}
-                
+                {% endif %}
+
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger" role="alert">
                         {% for error in form.non_field_errors %}
@@ -26,19 +24,9 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+
                 <form method="POST">
                     {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.nome_cliente.id_for_label }}" class="form-label">{{ form.nome_cliente.label }}</label>
-                        {{ form.nome_cliente }}
-                        {% for error in form.nome_cliente.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                    </div>
-                    <div class="mb-3">
-                        <label for="{{ form.telefone_cliente.id_for_label }}" class="form-label">{{ form.telefone_cliente.label }}</label>
-                        {{ form.telefone_cliente }}
-                        {% for error in form.telefone_cliente.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                    </div>
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -59,11 +47,10 @@
                         {% for error in form.quantidade_pessoas.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                     
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-success btn-lg">Enviar Solicitação</button>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-success btn-lg" style="background-color: #8B4513; border-color: #8B4513;">Enviar Solicitação</button>
                     </div>
                 </form>
-                {% endif %}
             </div>
         </div>
     </div>
