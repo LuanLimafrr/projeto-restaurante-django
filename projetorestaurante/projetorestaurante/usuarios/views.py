@@ -1,4 +1,5 @@
 # Arquivo: usuarios/views.py
+# CORRIGIDO: Redirecionamento da Recepcionista para 'gerenciar_fila'
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
@@ -9,7 +10,6 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 
 # --- IMPORTAÇÃO NECESSÁRIA ---
-# Importamos a função que verifica se o usuário está no grupo 'Gerente'
 from cardapio.views import is_gerente 
 
 # --- VIEW DE REGISTRO (Sem mudanças) ---
@@ -29,7 +29,6 @@ def registrar(request):
 @login_required
 def perfil(request):
     # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
-    # Se for staff E NÃO for superusuário, redireciona para o dashboard
     if request.user.is_staff and not request.user.is_superuser:
         if is_gerente(request.user):
             return redirect('mapa_mesas') # Gerente vai para o PDV Mesas
@@ -50,7 +49,6 @@ class CustomLoginViewUnificada(LoginView):
         if next_url: return next_url # Respeita o parâmetro ?next=
 
         # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
-        # Se for staff E NÃO for superusuário, redireciona para o dashboard
         if self.request.user.is_staff and not self.request.user.is_superuser:
             if is_gerente(self.request.user):
                 return reverse_lazy('mapa_mesas') # Gerente vai para o PDV Mesas

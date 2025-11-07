@@ -1,5 +1,5 @@
 # Arquivo: comandas/views.py
-# CORRIGIDO: Redirecionamento da Recepcionista
+# CORRIGIDO: Redirecionamento da Recepcionista após alocação
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -14,7 +14,7 @@ from django.db.models import Sum, Count, Case, When, F
 from decimal import Decimal
 import datetime
 from datetime import timedelta
-# Importações de permissão
+# --- IMPORTAÇÕES DE PERMISSÃO CORRIGIDAS ---
 from cardapio.views import is_gerente, is_staff_user 
 
 # --- VIEW PRINCIPAL DO STAFF (PDV MESAS) - SÓ GERENTE ---
@@ -40,28 +40,24 @@ def mapa_mesas(request):
 @user_passes_test(is_staff_user, login_url='inicio') 
 def processar_alocacao_cliente(request, id_mesa, id_cliente):
     if not request.user.is_staff: return redirect('inicio')
+    
     mesa = get_object_or_404(Mesa, id=id_mesa)
     cliente_a_sentar = get_object_or_404(ClienteFila, id=id_cliente)
+    
+    # --- CORREÇÃO AQUI ---
+    # Define para onde redirecionar ANTES de qualquer ação
+    redirect_url = 'mapa_mesas' if is_gerente(request.user) else 'gerenciar_fila'
+
     if mesa.status == 'LIVRE' and cliente_a_sentar.status == 'AGUARDANDO':
         mesa.status = 'OCUPADA'; mesa.save()
         cliente_a_sentar.status = 'CHAMADO'; cliente_a_sentar.timestamp_atendimento = timezone.now(); cliente_a_sentar.save()
         Comanda.objects.create(mesa=mesa, status='ABERTA')
         messages.success(request, f"Cliente '{cliente_a_sentar.nome}' alocado à Mesa {mesa.numero}.")
-        
-        # --- CORREÇÃO AQUI ---
-        # O Gerente volta para o 'mapa_mesas', a Recepcionista volta para 'gerenciar_fila'
-        if is_gerente(request.user):
-            return redirect('mapa_mesas')
-        else:
-            return redirect('gerenciar_fila')
-        # --- FIM DA CORREÇÃO ---
+        return redirect(redirect_url) # <-- REDIRECIONAMENTO INTELIGENTE
             
     else:
         messages.warning(request, "Não foi possível alocar: Mesa não está livre ou cliente não está mais aguardando.")
-        if is_gerente(request.user):
-            return redirect('mapa_mesas')
-        else:
-            return redirect('gerenciar_fila')
+        return redirect(redirect_url) # <-- REDIRECIONAMENTO INTELIGENTE
 
 # --- VIEW DETALHE COMANDA (SÓ GERENTE) ---
 @login_required
