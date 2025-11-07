@@ -1,87 +1,131 @@
-{% extends "staff_base.html" %}
+{% extends 'staff_base.html' %}
 {% load static %}
+{% load auth_extras %}
+
+{% block title %}PDV - Mapa de Mesas{% endblock %}
 
 {% block main_content %}
-{% if cliente_a_alocar %}
-<div class="alert alert-primary shadow-sm" role="alert">
-  <h4 class="alert-heading">Modo de Alocação Ativo!</h4>
-  <p>Alocando: <strong>{{ cliente_a_alocar.nome }}</strong> (Grupo de {{ cliente_a_alocar.quantidade }} pessoas).</p>
-  <p class="mb-0">Clique em uma mesa **LIVRE** (cinza) para alocar. Ou <a href="{% url 'mapa_mesas' %}" class="alert-link">cancele</a>.</p>
-</div>
-{% endif %}
-
-<div class="row g-4">
-    <div class="col-lg-9">
-        <h2 class="mb-4">Mapa de Mesas</h2>
-        <div class="row g-3">
-            {% for mesa in mesas %}
-            <div class="col-md-4 col-lg-3">
+<div class="container-fluid mt-4">
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="h4 mb-0">
                 {% if cliente_a_alocar %}
-                    {% if mesa.status == 'LIVRE' %}
-                        <a href="{% url 'processar_alocacao_cliente' mesa.id cliente_a_alocar.id %}" class="card text-white bg-success shadow-sm h-100 text-decoration-none card-hover-grow">
-                            <div class="card-body text-center d-flex flex-column p-2 justify-content-center">
-                                <h5 class="card-title mb-1" style="font-size: 1.3rem;">Mesa {{ mesa.numero }}</h5><span class="fw-bold">SELECIONAR</span>
-                            </div>
+                    <i class="bi bi-person-plus-fill text-primary me-2"></i> Alocar Cliente: <strong>{{ cliente_a_alocar.nome }}</strong> ({{ cliente_a_alocar.quantidade }}p)
+                {% else %}
+                    PDV - Mapa de Mesas
+                {% endif %}
+            </h2>
+            {% if cliente_a_alocar %}
+                <small class="text-muted">Selecione uma mesa 'Livre' abaixo para alocar o cliente.</small>
+            {% endif %}
+        </div>
+
+        {% if is_gerente and not cliente_a_alocar %}
+        <div class="col-md-4">
+            <div class="card bg-dark text-white shadow-sm h-100">
+                <div class="card-header bg-darker">
+                    <h5 class="mb-0">Próximo na Fila</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if proximo_cliente %}
+                        <h4 class="mb-1">{{ proximo_cliente.nome }}</h4>
+                        <p class="fs-6 text-muted mb-2">{{ proximo_cliente.quantidade }} pessoas (às {{ proximo_cliente.timestamp_entrada|time:"H:i" }})</p>
+                        <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ proximo_cliente.id }}" class="btn btn-primary btn-sm w-100">
+                            INICIAR ALOCAÇÃO
                         </a>
                     {% else %}
-                        <div class="card bg-secondary shadow-sm h-100 opacity-50">
-                             <div class="card-body text-center d-flex flex-column p-2 justify-content-center">
-                                <h5 class="card-title mb-1" style="font-size: 1.3rem;">Mesa {{ mesa.numero }}</h5><p class="card-text fw-bold small mb-0">{{ mesa.get_status_display }}</p>
-                            </div>
-                        </div>
+                        <p class="mb-0 text-muted">A fila está vazia.</p>
                     {% endif %}
-                {% else %}
-                    {% if mesa.status == 'OCUPADA' %} <div class="card text-white bg-danger shadow-sm h-100">
-                    {% elif mesa.status == 'PAGAMENTO' %} <div class="card text-white bg-info shadow-sm h-100">
-                    {% else %} <div class="card bg-light shadow-sm h-100"> {% endif %}
-                        <div class="card-body text-center d-flex flex-column p-2">
-                            <h5 class="card-title mb-1" style="font-size: 1.3rem;">Mesa {{ mesa.numero }}</h5>
-                            <p class="card-text fw-bold small mb-2">{{ mesa.get_status_display }}</p>
-                            <div class="mt-auto">
-                                {% if mesa.status == 'LIVRE' %}<span class="text-muted fst-italic small">Livre</span>
-                                {% else %} <a href="{% url 'detalhe_comanda' mesa.id %}" class="btn btn-sm btn-light w-100">Ver Comanda</a> {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-            {% empty %} <div class="col"><p>Nenhuma mesa cadastrada.</p></div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div class="col-lg-3">
-         <div class="card shadow-sm sticky-top" style="top: 70px;">
-             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Fila de Espera</h5>
-                {% if fila_pendente_count > 0 %}<span class="badge bg-danger rounded-pill">{{ fila_pendente_count }}</span>{% endif %}
-            </div>
-            <div class="card-body p-2">
-                 {% if proximo_cliente %}
-                    <div class="text-center mb-3 border-bottom pb-2">
-                        <h6 class="mb-1">Próximo: <strong>{{ proximo_cliente.nome }}</strong></h6>
-                        <p class="mb-1 small">{{ proximo_cliente.quantidade }} pessoas - Chegou {{ proximo_cliente.timestamp_entrada|date:"H:i" }}</p>
-                        <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ proximo_cliente.id }}" class="btn btn-sm btn-primary w-100">Chamar e Alocar Próximo</a>
-                    </div>
-                 {% endif %}
-                 <h6>Aguardando:</h6>
-                 {% if clientes_aguardando %}
-                 <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
-                    {% for cliente in clientes_aguardando %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-1 py-1">
-                            <div class="small"><strong>{{ forloop.counter }}º {{ cliente.nome }}</strong> ({{ cliente.quantidade }}p) <small class="d-block text-muted">{{ cliente.timestamp_entrada|date:"H:i" }}</small></div>
-                             <a href="{% url 'mapa_mesas' %}?alocar_cliente_id={{ cliente.id }}" class="btn btn-xs btn-outline-primary" title="Alocar este cliente"><i class="bi bi-box-arrow-in-right"></i></a>
-                        </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                    <p class="text-muted text-center small my-3">Fila vazia.</p>
-                {% endif %}
-                <div class="text-center mt-2">
-                     <a href="{% url 'gerenciar_fila' %}" class="btn btn-sm btn-outline-secondary w-100">Ver Gerenciamento Completo</a>
                 </div>
             </div>
-         </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        {% for mesa in mesas %}
+            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                
+                {% comment %}
+                Se estamos alocando, o link da mesa LIVRE chama 'processar_alocacao_cliente'.
+                Se estamos no PDV normal (Gerente), o link da mesa OCUPADA chama 'detalhe_comanda'.
+                {% endcomment %}
+                
+                {% if cliente_a_alocar and mesa.status == 'LIVRE' %}
+                    <a href="{% url 'processar_alocacao_cliente' id_mesa=mesa.id id_cliente=cliente_a_alocar.id %}" 
+                       class="card-mesa-link text-decoration-none" 
+                       onclick="return confirm('Alocar {{ cliente_a_alocar.nome }} na Mesa {{ mesa.numero }}?')">
+                        <div class="card card-mesa status-livre shadow-sm text-center">
+                            <div class="card-body">
+                                <h3 class="card-title mb-0">Mesa {{ mesa.numero }}</h3>
+                                <span class="badge bg-success-subtle text-success-emphasis rounded-pill">{{ mesa.get_status_display }}</span>
+                                <div class="mt-2 text-success-emphasis">
+                                    <i class="bi bi-check-circle-fill fs-3"></i><br>
+                                    <strong>Alocar Cliente</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                
+                {% elif is_gerente and (mesa.status == 'OCUPADA' or mesa.status == 'PAGAMENTO') %}
+                    <a href="{% url 'detalhe_comanda' mesa.id %}" class="card-mesa-link text-decoration-none">
+                        <div class="card card-mesa {% if mesa.status == 'OCUPADA' %}status-ocupada{% else %}status-pagamento{% endif %} shadow-sm text-center">
+                            <div class="card-body">
+                                <h3 class="card-title mb-0">Mesa {{ mesa.numero }}</h3>
+                                {% if mesa.status == 'OCUPADA' %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill">{{ mesa.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-info-subtle text-info-emphasis rounded-pill">{{ mesa.get_status_display }}</span>
+                                {% endif %}
+                                <div class="mt-2 {% if mesa.status == 'OCUPADA' %}text-danger-emphasis{% else %}text-info-emphasis{% endif %}">
+                                    <i class="bi bi-file-earmark-text-fill fs-3"></i><br>
+                                    <strong>Ver Comanda</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                
+                {% else %}
+                    <div class="card card-mesa {% if mesa.status == 'LIVRE' %}status-livre{% else %}status-indisponivel{% endif %} shadow-sm text-center opacity-50">
+                        <div class="card-body">
+                            <h3 class="card-title mb-0">Mesa {{ mesa.numero }}</h3>
+                            {% if mesa.status == 'LIVRE' %}
+                                <span class="badge bg-success-subtle text-success-emphasis rounded-pill">{{ mesa.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">{{ mesa.get_status_display }}</span>
+                            {% endif %}
+                            <div class="mt-2 text-muted">
+                                <i class="bi {% if mesa.status == 'LIVRE' %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %} fs-3"></i><br>
+                                {% if cliente_a_alocar %}
+                                    <strong>Indisponível</strong>
+                                {% else %}
+                                    <strong>Livre</strong>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    Nenhuma mesa cadastrada. Por favor, peça ao Superusuário para cadastrar as mesas no painel /admin.
+                </div>
+            </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

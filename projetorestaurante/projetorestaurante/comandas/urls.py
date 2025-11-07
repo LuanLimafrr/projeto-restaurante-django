@@ -3,13 +3,16 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.mapa_mesas, name='mapa_mesas'),
+    # URL do Gerente (PDV Completo)
+    path('', views.mapa_mesas, name='mapa_mesas'), 
     
-    # --- GARANTIA DA URL CORRETA ---
-    # Esta é a URL que o dashboard usa para alocar
+    # --- NOVA URL PARA RECEPCIONISTA ---
+    path('alocar/<int:id_cliente>/', views.mapa_mesas_recepcao, name='mapa_mesas_recepcao'),
+    
+    # URL de Ação (que ambos usam)
     path('processar-alocacao/<int:id_mesa>/<int:id_cliente>/', views.processar_alocacao_cliente, name='processar_alocacao_cliente'),
-    # --- FIM DA GARANTIA ---
 
+    # URLs de Gerente
     path('mesa/<int:id_mesa>/', views.detalhe_comanda, name='detalhe_comanda'),
     path('fechar/<int:id_comanda>/', views.fechar_comanda, name='fechar_comanda'),
     path('item/remover/<int:id_item>/', views.remover_item_comanda, name='remover_item_comanda'),
