@@ -55,14 +55,25 @@ def mapa_mesas_recepcao(request, id_cliente):
 
     mesas = Mesa.objects.all().order_by('numero')
     
+    # --- INÍCIO DA CORREÇÃO ---
+    # Estas linhas estavam faltando. O template 'dashboard_staff.html'
+    # precisa delas para exibir as listas de espera.
+    clientes_aguardando = ClienteFila.objects.filter(status='AGUARDANDO').order_by('timestamp_entrada')
+    proximo_cliente = clientes_aguardando.first()
+    # --- FIM DA CORREÇÃO ---
+    
     contexto = { 
         'mesas': mesas, 
         'cliente_a_alocar': cliente_a_alocar,
-        'is_gerente': is_gerente(request.user) # Passa False para Recepcionista
+        'is_gerente': is_gerente(request.user), # Passa False para Recepcionista
+        
+        # --- CONTEXTO ADICIONADO ---
+        'clientes_aguardando': clientes_aguardando, 
+        'proximo_cliente': proximo_cliente,
+        # --- FIM DO CONTEXTO ADICIONADO ---
     }
     # Esta view renderiza o MESMO template do dashboard, mas o template vai esconder o financeiro
     return render(request, 'comandas/dashboard_staff.html', contexto)
-
 
 # --- VIEW PARA PROCESSAR A ALOCAÇÃO (TODO STAFF PODE FAZER) ---
 @login_required
