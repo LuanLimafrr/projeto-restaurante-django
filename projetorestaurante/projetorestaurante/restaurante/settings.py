@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Lendo SECRET_KEY e DEBUG do arquivo .env ou das variáveis de ambiente do Render
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
 
 # Ajustado para ler do .env ou do Render

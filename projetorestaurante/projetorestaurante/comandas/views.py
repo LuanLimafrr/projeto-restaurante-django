@@ -57,7 +57,7 @@ def mapa_mesas_recepcao(request, id_cliente):
     
     # --- INÍCIO DA CORREÇÃO ---
     # Estas linhas estavam faltando. O template 'dashboard_staff.html'
-    # precisa delas para exibir as listas de espera.
+    # precisa delas (assim como a view 'gerenciar_fila').
     clientes_aguardando = ClienteFila.objects.filter(status='AGUARDANDO').order_by('timestamp_entrada')
     proximo_cliente = clientes_aguardando.first()
     # --- FIM DA CORREÇÃO ---
@@ -72,8 +72,9 @@ def mapa_mesas_recepcao(request, id_cliente):
         'proximo_cliente': proximo_cliente,
         # --- FIM DO CONTEXTO ADICIONADO ---
     }
-    # Esta view renderiza o MESMO template do dashboard, mas o template vai esconder o financeiro
+    # Esta view renderiza o MESMO template do dashboard
     return render(request, 'comandas/dashboard_staff.html', contexto)
+
 
 # --- VIEW PARA PROCESSAR A ALOCAÇÃO (TODO STAFF PODE FAZER) ---
 @login_required
