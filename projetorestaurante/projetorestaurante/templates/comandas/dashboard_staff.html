@@ -1,12 +1,13 @@
 {% extends 'staff_base.html' %}
 {% load static %}
-{% load auth_extras %}
+{% load auth_extras %} <!-- IMPORTANTE: Carrega o filtro -->
 
-{% block title %}PDV - Mapa de Mesas{% endblock %}
+{% block title %}Mapa de Mesas{% endblock %}
 
 {% block main_content %}
 <div class="container-fluid mt-4">
     
+    <!-- Título e Lado Direito (Fila) -->
     <div class="row mb-4">
         <div class="col-md-8">
             <h2 class="h4 mb-0">
@@ -18,10 +19,15 @@
             </h2>
             {% if cliente_a_alocar %}
                 <small class="text-muted">Selecione uma mesa 'Livre' abaixo para alocar o cliente.</small>
+            {% else %}
+                 <small class="text-muted">Visão geral do salão.</small>
             {% endif %}
         </div>
 
-        {% if is_gerente and not cliente_a_alocar %}
+        <!-- Card 'Próximo na Fila' (SÓ APARECE PARA O GERENTE, pois Recepcionista já está na fila) -->
+        
+        <!-- *** CORREÇÃO AQUI *** -->
+        {% if request.user|has_group:"Gerente" and not cliente_a_alocar %}
         <div class="col-md-4">
             <div class="card bg-dark text-white shadow-sm h-100">
                 <div class="card-header bg-darker">
@@ -41,8 +47,10 @@
             </div>
         </div>
         {% endif %}
+        <!-- *** FIM DA CORREÇÃO *** -->
     </div>
 
+    <!-- Exibição das Mensagens -->
     {% if messages %}
         <div class="mb-3">
             {% for message in messages %}
@@ -54,6 +62,7 @@
         </div>
     {% endif %}
 
+    <!-- Grid de Mesas -->
     <div class="row g-3">
         {% for mesa in mesas %}
             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
@@ -64,6 +73,7 @@
                 {% endcomment %}
                 
                 {% if cliente_a_alocar and mesa.status == 'LIVRE' %}
+                    <!-- Modo Alocação (Recepcionista ou Gerente) -->
                     <a href="{% url 'processar_alocacao_cliente' id_mesa=mesa.id id_cliente=cliente_a_alocar.id %}" 
                        class="card-mesa-link text-decoration-none" 
                        onclick="return confirm('Alocar {{ cliente_a_alocar.nome }} na Mesa {{ mesa.numero }}?')">
@@ -79,7 +89,11 @@
                         </div>
                     </a>
                 
-                {% elif is_gerente and (mesa.status == 'OCUPADA' or mesa.status == 'PAGAMENTO') %}
+                <!-- *** CORREÇÃO AQUI *** -->
+                {% elif request.user|has_group:"Gerente" and (mesa.status == 'OCUPADA' or mesa.status == 'PAGAMENTO') %}
+                <!-- *** FIM DA CORREÇÃO *** -->
+
+                    <!-- Modo PDV (SÓ Gerente) -->
                     <a href="{% url 'detalhe_comanda' mesa.id %}" class="card-mesa-link text-decoration-none">
                         <div class="card card-mesa {% if mesa.status == 'OCUPADA' %}status-ocupada{% else %}status-pagamento{% endif %} shadow-sm text-center">
                             <div class="card-body">
@@ -98,6 +112,7 @@
                     </a>
                 
                 {% else %}
+                    <!-- Mesa Indisponível (Livre no PDV, ou Ocupada/Pagamento para Recepcionista) -->
                     <div class="card card-mesa {% if mesa.status == 'LIVRE' %}status-livre{% else %}status-indisponivel{% endif %} shadow-sm text-center opacity-50">
                         <div class="card-body">
                             <h3 class="card-title mb-0">Mesa {{ mesa.numero }}</h3>
