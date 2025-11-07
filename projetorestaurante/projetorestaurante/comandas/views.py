@@ -1,4 +1,5 @@
 # Arquivo: comandas/views.py
+# CORRIGIDO: Redirecionamento da Recepcionista
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -13,12 +14,12 @@ from django.db.models import Sum, Count, Case, When, F
 from decimal import Decimal
 import datetime
 from datetime import timedelta
-# --- IMPORTAÇÕES DE PERMISSÃO CORRIGIDAS ---
+# Importações de permissão
 from cardapio.views import is_gerente, is_staff_user 
 
 # --- VIEW PRINCIPAL DO STAFF (PDV MESAS) - SÓ GERENTE ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def mapa_mesas(request):
     if not request.user.is_staff: return redirect('inicio')
     cliente_id_para_alocar = request.GET.get('alocar_cliente_id')
@@ -36,7 +37,7 @@ def mapa_mesas(request):
 
 # --- VIEW PARA PROCESSAR A ALOCAÇÃO (TODO STAFF PODE FAZER) ---
 @login_required
-@user_passes_test(is_staff_user, login_url='inicio') # <-- TODO STAFF
+@user_passes_test(is_staff_user, login_url='inicio') 
 def processar_alocacao_cliente(request, id_mesa, id_cliente):
     if not request.user.is_staff: return redirect('inicio')
     mesa = get_object_or_404(Mesa, id=id_mesa)
@@ -46,14 +47,25 @@ def processar_alocacao_cliente(request, id_mesa, id_cliente):
         cliente_a_sentar.status = 'CHAMADO'; cliente_a_sentar.timestamp_atendimento = timezone.now(); cliente_a_sentar.save()
         Comanda.objects.create(mesa=mesa, status='ABERTA')
         messages.success(request, f"Cliente '{cliente_a_sentar.nome}' alocado à Mesa {mesa.numero}.")
-        return redirect('mapa_mesas')
+        
+        # --- CORREÇÃO AQUI ---
+        # O Gerente volta para o 'mapa_mesas', a Recepcionista volta para 'gerenciar_fila'
+        if is_gerente(request.user):
+            return redirect('mapa_mesas')
+        else:
+            return redirect('gerenciar_fila')
+        # --- FIM DA CORREÇÃO ---
+            
     else:
         messages.warning(request, "Não foi possível alocar: Mesa não está livre ou cliente não está mais aguardando.")
-        return redirect('mapa_mesas')
+        if is_gerente(request.user):
+            return redirect('mapa_mesas')
+        else:
+            return redirect('gerenciar_fila')
 
 # --- VIEW DETALHE COMANDA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def detalhe_comanda(request, id_mesa):
     if not request.user.is_staff: return redirect('inicio')
     mesa = get_object_or_404(Mesa, id=id_mesa)
@@ -78,7 +90,7 @@ def detalhe_comanda(request, id_mesa):
 
 # --- VIEW FECHAR CONTA / GERAR NOTA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def fechar_comanda(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -101,7 +113,7 @@ def fechar_comanda(request, id_comanda):
 # --- VIEW CONFIRMAR PAGAMENTO (SÓ GERENTE) ---
 @login_required
 @transaction.atomic
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def confirmar_pagamento(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -131,14 +143,14 @@ def confirmar_pagamento(request, id_comanda):
 
 # --- AÇÕES DE ITEM NA COMANDA (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def remover_item_comanda(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda; id_mesa_redirect = comanda_pai.mesa.id
     if comanda_pai.status == 'ABERTA': nome_item = item.item_cardapio.nome; item.delete(); messages.warning(request, f"Item '{nome_item}' removido.")
     return redirect('detalhe_comanda', id_mesa=id_mesa_redirect)
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def toggle_taxa_servico(request, id_comanda):
     if not request.user.is_staff: return redirect('inicio')
     comanda = get_object_or_404(Comanda, id=id_comanda)
@@ -147,14 +159,14 @@ def toggle_taxa_servico(request, id_comanda):
         status_taxa = "incluída" if comanda.incluir_taxa_servico else "removida"; messages.info(request, f"Taxa {status_taxa}.")
     return redirect('detalhe_comanda', id_mesa=comanda.mesa.id)
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def aumentar_quantidade_item(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda
     if comanda_pai.status == 'ABERTA': item.quantidade += 1; item.save()
     return redirect('detalhe_comanda', id_mesa=comanda_pai.mesa.id)
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio') 
 def diminuir_quantidade_item(request, id_item):
     if not request.user.is_staff: return redirect('inicio')
     item = get_object_or_404(ItemComanda, id=id_item); comanda_pai = item.comanda
@@ -165,7 +177,7 @@ def diminuir_quantidade_item(request, id_item):
 
 # --- VIEW DE RELATÓRIO (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- JÁ ESTAVA CORRETO
+@user_passes_test(is_gerente, login_url='inicio') 
 def relatorio_diario(request):
     if not request.user.is_staff: return redirect('inicio')
     hoje = timezone.now().date(); periodo = request.GET.get('periodo', 'hoje')

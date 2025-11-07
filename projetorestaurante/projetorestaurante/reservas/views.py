@@ -1,10 +1,10 @@
 # Arquivo: reservas/views.py
-# VERSÃO CORRIGIDA (id vs reserva_id) E COM API DE EMAIL
+# CORRIGIDO: Argumentos 'id' e proteção de views do Gerente
 
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ReservaForm
 from .models import Reserva
-from django.contrib.auth.decorators import login_required, user_passes_test # <--- IMPORTAÇÃO CORRIGIDA
+from django.contrib.auth.decorators import login_required, user_passes_test # Importa user_passes_test
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib import messages
@@ -12,17 +12,15 @@ from django.db.models import Sum
 from django.utils import timezone
 import datetime
 from datetime import timedelta
-import requests # <-- IMPORTADO PARA API DE EMAIL
-import os # <-- IMPORTADO PARA API DE EMAIL
+import requests 
+import os 
 
 # --- IMPORTAÇÕES DE PERMISSÃO ---
-# Importa as funções de checagem do seu app 'cardapio'
 from cardapio.views import is_gerente, is_staff_user 
-
 
 # --- FUNÇÃO DE EMAIL (USANDO API REQUESTS) ---
 def send_email_via_api(to_email, subject, html_content):
-    api_key = os.environ.get('SENDGRID_API_KEY') # LÊ A CHAVE DO RENDER
+    api_key = os.environ.get('SENDGRID_API_KEY') 
     from_email = settings.DEFAULT_FROM_EMAIL 
 
     if not api_key or not from_email:
@@ -71,14 +69,11 @@ def enviar_email_status_reserva(request, reserva):
     mensagem_html = render_to_string('emails/status_reserva.html', contexto_email) # Renderize HTML
 
     try:
-        # --- MUDANÇA PRINCIPAL AQUI ---
         sucesso = send_email_via_api(
             to_email=reserva.usuario.email,
             subject=assunto,
             html_content=mensagem_html
         )
-        # --- FIM DA MUDANÇA ---
-        
         if sucesso:
             print(f"DEBUG: Email status '{status_legivel}' enviado com sucesso para {reserva.usuario.email} via SendGrid API.")
         else:
@@ -105,7 +100,7 @@ def fazer_reserva_modal(request):
             else:
                 reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
                 messages.success(request, 'Solicitação enviada! Aguarde email.')
-                return redirect('perfil') # Redireciona para o perfil do cliente
+                return redirect('perfil') 
         else: messages.error(request, f"Erro: {next(iter(form.errors.values()))[0] if form.errors else 'Verifique.'}")
     return redirect('inicio')
 
@@ -124,7 +119,7 @@ def fazer_reserva(request):
             else:
                 reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
                 messages.success(request, 'Solicitação enviada! Aguarde email.')
-                return redirect('perfil') # Redireciona para o perfil do cliente
+                return redirect('perfil') 
     else: form = ReservaForm()
     contexto = {'form': form}
     return render(request, 'reservas/fazer_reserva.html', contexto)
@@ -135,7 +130,6 @@ def fazer_reserva(request):
 @user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
 def gerenciar_reservas(request):
     if not request.user.is_staff: return redirect('inicio')
-
     hoje = timezone.now().date()
     data_selecionada_str = request.GET.get('data')
     data_selecionada = hoje
@@ -168,7 +162,6 @@ def gerenciar_reservas(request):
     reservas_pendentes_dia = Reserva.objects.filter(status='PENDENTE', data=data_selecionada)
     reservas_confirmadas_dia = Reserva.objects.filter(status='CONFIRMADA', data=data_selecionada)
     lista_reservas_dia = (reservas_pendentes_dia | reservas_confirmadas_dia).order_by('hora').distinct()
-
     reservas_pendentes_todas = Reserva.objects.filter(status='PENDENTE').order_by('data', 'hora')
 
     contexto = {
