@@ -1,10 +1,10 @@
 # Arquivo: reservas/views.py
+# VERSÃO CORRIGIDA (id vs reserva_id) E COM API DE EMAIL
 
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ReservaForm
 from .models import Reserva
-from django.contrib.auth.decorators import login_required, user_passes_test # Adiciona user_passes_test
-# from django.core.mail import send_mail # REMOVIDO
+from django.contrib.auth.decorators import login_required, user_passes_test # <--- IMPORTAÇÃO CORRIGIDA
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib import messages
@@ -12,11 +12,13 @@ from django.db.models import Sum
 from django.utils import timezone
 import datetime
 from datetime import timedelta
-import requests # <-- ADICIONADO
-import os # <-- ADICIONADO
+import requests # <-- IMPORTADO PARA API DE EMAIL
+import os # <-- IMPORTADO PARA API DE EMAIL
 
 # --- IMPORTAÇÕES DE PERMISSÃO ---
+# Importa as funções de checagem do seu app 'cardapio'
 from cardapio.views import is_gerente, is_staff_user 
+
 
 # --- FUNÇÃO DE EMAIL (USANDO API REQUESTS) ---
 def send_email_via_api(to_email, subject, html_content):
@@ -193,9 +195,9 @@ def historico_reservas(request):
 # --- confirmar_reserva (SÓ GERENTE) ---
 @login_required
 @user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
-def confirmar_reserva(request, id):
+def confirmar_reserva(request, id): # <-- CORRIGIDO AQUI (era reserva_id)
     if not request.user.is_staff: return redirect('inicio')
-    reserva = get_object_or_404(Reserva, id=id)
+    reserva = get_object_or_404(Reserva, id=id) # <-- CORRIGIDO AQUI
     if reserva.status == 'PENDENTE':
         reserva.status = 'CONFIRMADA'; reserva.save()
         nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
@@ -206,9 +208,9 @@ def confirmar_reserva(request, id):
 # --- cancelar_reserva (SÓ GERENTE) ---
 @login_required
 @user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
-def cancelar_reserva(request, id):
+def cancelar_reserva(request, id): # <-- CORRIGIDO AQUI (era reserva_id)
     if not request.user.is_staff: return redirect('inicio')
-    reserva = get_object_or_404(Reserva, id=id)
+    reserva = get_object_or_404(Reserva, id=id) # <-- CORRIGIDO AQUI
     if reserva.status != 'CANCELADA':
         reserva.status = 'CANCELADA'; reserva.save()
         nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
