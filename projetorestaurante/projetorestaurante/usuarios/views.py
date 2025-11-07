@@ -1,5 +1,5 @@
 # Arquivo: usuarios/views.py
-# CORRIGIDO: Redirecionamento da Recepcionista para 'gerenciar_fila'
+# CORRIGIDO: Redirecionamento da Recepcionista e do Superusuário
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
@@ -29,6 +29,7 @@ def registrar(request):
 @login_required
 def perfil(request):
     # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
+    # Se for staff E NÃO for superusuário, redireciona para o dashboard
     if request.user.is_staff and not request.user.is_superuser:
         if is_gerente(request.user):
             return redirect('mapa_mesas') # Gerente vai para o PDV Mesas
@@ -49,6 +50,7 @@ class CustomLoginViewUnificada(LoginView):
         if next_url: return next_url # Respeita o parâmetro ?next=
 
         # --- LÓGICA DE REDIRECIONAMENTO INTELIGENTE ---
+        # Se for staff E NÃO for superusuário, redireciona para o dashboard
         if self.request.user.is_staff and not self.request.user.is_superuser:
             if is_gerente(self.request.user):
                 return reverse_lazy('mapa_mesas') # Gerente vai para o PDV Mesas

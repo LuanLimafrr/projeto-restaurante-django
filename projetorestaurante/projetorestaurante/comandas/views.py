@@ -1,5 +1,5 @@
 # Arquivo: comandas/views.py
-# CORRIGIDO: Adiciona view 'mapa_mesas_recepcao' para Recepcionista
+# CORRIGIDO: Redirecionamento da Recepcionista após alocação
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -22,15 +22,21 @@ from cardapio.views import is_gerente, is_staff_user
 @user_passes_test(is_gerente, login_url='inicio') 
 def mapa_mesas(request):
     if not request.user.is_staff: return redirect('inicio')
-    
-    # Esta view continua sendo o PDV completo do Gerente
+    cliente_id_para_alocar = request.GET.get('alocar_cliente_id')
+    cliente_a_alocar = None
+    if cliente_id_para_alocar:
+        try: cliente_a_alocar = ClienteFila.objects.get(id=cliente_id_para_alocar, status='AGUARDANDO')
+        except ClienteFila.DoesNotExist:
+            messages.error(request, "Cliente não encontrado ou já foi alocado.")
+            return redirect('mapa_mesas')
     mesas = Mesa.objects.all().order_by('numero')
     clientes_aguardando = ClienteFila.objects.filter(status='AGUARDANDO').order_by('timestamp_entrada')
     proximo_cliente = clientes_aguardando.first()
     contexto = { 
         'mesas': mesas, 
         'clientes_aguardando': clientes_aguardando, 
-        'proximo_cliente': proximo_cliente,
+        'proximo_cliente': proximo_cliente, 
+        'cliente_a_alocar': cliente_a_alocar,
         'is_gerente': True # Para o template saber que é o gerente
     }
     return render(request, 'comandas/dashboard_staff.html', contexto)
@@ -52,7 +58,7 @@ def mapa_mesas_recepcao(request, id_cliente):
     contexto = { 
         'mesas': mesas, 
         'cliente_a_alocar': cliente_a_alocar,
-        'is_gerente': is_gerente(request.user) # Passa se é gerente ou não
+        'is_gerente': is_gerente(request.user) # Passa False para Recepcionista
     }
     # Esta view renderiza o MESMO template do dashboard, mas o template vai esconder o financeiro
     return render(request, 'comandas/dashboard_staff.html', contexto)
@@ -67,8 +73,8 @@ def processar_alocacao_cliente(request, id_mesa, id_cliente):
     mesa = get_object_or_404(Mesa, id=id_mesa)
     cliente_a_sentar = get_object_or_404(ClienteFila, id=id_cliente)
     
+    # --- CORREÇÃO AQUI ---
     # Define para onde redirecionar ANTES de qualquer ação
-    # Gerente volta pro PDV, Recepcionista volta pra Fila
     redirect_url = 'mapa_mesas' if is_gerente(request.user) else 'gerenciar_fila'
 
     if mesa.status == 'LIVRE' and cliente_a_sentar.status == 'AGUARDANDO':
@@ -148,7 +154,7 @@ def confirmar_pagamento(request, id_comanda):
             for item_comanda in itens_com_estoque:
                 item_estoque = item_comanda.item_cardapio.item_estoque
                 item_estoque.remover_do_estoque(item_comanda.quantidade)
-                if item_estoque.ponto_reposicao is not None and item_estoque.quantidade_atual <= item_stoque.ponto_reposicao:
+                if item_estoque.ponto_reposicao is not None and item_estoque.quantidade_atual <= item_estoque.ponto_reposicao:
                     messages.warning(request, f"ALERTA ESTOQUE: '{item_estoque.nome}' baixo! Restam {item_estoque.quantidade_atual} un.")
             comanda.status = 'PAGA'; comanda.save()
             comanda.mesa.status = 'LIVRE'; comanda.mesa.save()

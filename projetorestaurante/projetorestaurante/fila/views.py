@@ -1,21 +1,31 @@
 # Arquivo: fila/views.py
+# CORRIGIDO: Loop de redirecionamento na view 'inicio'
 
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import ClienteFila
 from django.utils import timezone
 from django.contrib import messages
-from comandas.models import Mesa, Comanda # Importar Mesa e Comanda
+from comandas.models import Mesa, Comanda 
 import datetime
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test # Adicionado user_passes_test
 from cardapio.models import ItemCardapio
 from django.http import JsonResponse
 from .forms import EntrarFilaForm
 from reservas.forms import ReservaForm
+# --- IMPORTAÇÕES DE PERMISSÃO ---
+from cardapio.views import is_gerente, is_staff_user 
 
-# --- VIEW DA LANDING PAGE (Redireciona Staff) ---
+# --- VIEW DA LANDING PAGE (CORRIGIDA) ---
 def inicio(request):
-    if request.user.is_authenticated and request.user.is_staff:
-        return redirect('mapa_mesas') # Staff vai para o dashboard
+    if request.user.is_authenticated:
+        # Se for staff E NÃO for superusuário, redireciona para o dashboard
+        if request.user.is_staff and not request.user.is_superuser:
+            if is_gerente(request.user):
+                return redirect('mapa_mesas') # Gerente vai para o PDV Mesas
+            else:
+                return redirect('gerenciar_fila') # Recepcionista (ou outro staff) vai para a Fila
+        # Se for cliente ou superusuário, continua na página 'inicio'
+        
     itens_destaque = ItemCardapio.objects.all().order_by('?')[:3]
     fila_form = EntrarFilaForm(); reserva_form = ReservaForm()
     contexto = { 'itens_destaque': itens_destaque, 'fila_form': fila_form, 'reserva_form': reserva_form }
@@ -77,8 +87,9 @@ def checar_posicao(request):
         if 'id_cliente_fila' in request.session: del request.session['id_cliente_fila']
         return JsonResponse({'status': 'nao_encontrado'}, status=404)
 
-# --- VIEWS GERENCIAMENTO FILA ---
+# --- VIEWS GERENCIAMENTO FILA (TODO STAFF) ---
 @login_required
+@user_passes_test(is_staff_user, login_url='inicio') # <-- TODO STAFF PODE VER
 def gerenciar_fila(request):
     if not request.user.is_staff: return redirect('inicio')
     clientes_aguardando = ClienteFila.objects.filter(status='AGUARDANDO').order_by('timestamp_entrada')
@@ -86,11 +97,8 @@ def gerenciar_fila(request):
     contexto = {'clientes_aguardando': clientes_aguardando, 'proximo_cliente': proximo_cliente}
     return render(request, 'fila/gerenciar_fila.html', contexto)
 
-# --- FUNÇÕES REMOVIDAS ---
-# A view 'chamar_proximo_cliente' foi REMOVIDA.
-# A view 'alocar_cliente_na_fila' foi REMOVIDA.
-
 @login_required
+@user_passes_test(is_staff_user, login_url='inicio') # <-- TODO STAFF PODE VER
 def remover_cliente(request, id):
     if not request.user.is_staff: return redirect('inicio')
     cliente = get_object_or_404(ClienteFila, id=id); nome_cliente = cliente.nome; cliente.delete()
@@ -98,6 +106,7 @@ def remover_cliente(request, id):
     return redirect('gerenciar_fila')
 
 @login_required
+@user_passes_test(is_staff_user, login_url='inicio') # <-- TODO STAFF PODE VER
 def marcar_como_desistente(request, id):
     if not request.user.is_staff: return redirect('inicio')
     cliente = get_object_or_404(ClienteFila, id=id)
