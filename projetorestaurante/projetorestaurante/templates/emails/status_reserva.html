@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <p>Olá {{ reserva.usuario.first_name|default:reserva.usuario.username }},</p>
+
+    <p>Gostaríamos de informar que o status da sua reserva no <strong>Chama do Cerrado</strong> foi atualizado.</p>
+
+    <p>
+        <strong>Detalhes da Reserva:</strong><br>
+        Data: {{ reserva.data|date:"d/m/Y" }}<br>
+        Hora: {{ reserva.hora|time:"H:i" }}<br>
+        Pessoas: {{ reserva.quantidade_pessoas }}<br>
+        <strong>Novo Status: {{ status_legivel }}</strong>
+    </p>
+
+    <p>
+        {% if reserva.status == 'CONFIRMADA' %}
+            Sua reserva está confirmada! Aguardamos você. Chegue com alguns minutos de antecedência.
+        {% elif reserva.status == 'CANCELADA' %}
+            Sua reserva foi cancelada conforme solicitado ou por decisão do restaurante. Se precisar de ajuda ou remarcar, por favor, entre em contato conosco.
+        {% endif %}
+    </p>
+
+    <p>Atenciosamente,<br>
+    Equipe Chama do Cerrado Steakhouse</p>
+</body>
+</html>

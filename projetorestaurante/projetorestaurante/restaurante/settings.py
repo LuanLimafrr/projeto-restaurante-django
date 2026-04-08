@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'usuarios',
     'estoque',
     'whitenoise.runserver_nostatic', # Adiciona whitenoise para servir estáticos (mesmo com DEBUG=True local, se necessário)
+    'anymail',
 ]
 
 MIDDLEWARE = [
@@ -85,11 +86,11 @@ WSGI_APPLICATION = 'restaurante.wsgi.application'
 # Lê a variável DATABASE_URL do Render (ou do .env local)
 DATABASES = {
     'default': dj_database_url.config(
-        # Fallback para seu sqlite local se DATABASE_URL não estiver no .env
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        default=config('DATABASE_URL'),
         conn_max_age=600
     )
 }
+
 
 
 # Password validation
@@ -137,17 +138,17 @@ LOGOUT_REDIRECT_URL = 'inicio'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# --- 3. CORREÇÃO DO E-MAIL (Lendo do Ambiente) ---
-if not DEBUG: # PRODUÇÃO (Lê do Render)
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get('EMAIL_HOST')
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
-    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
-    SERVER_EMAIL = os.environ.get('SERVER_EMAIL')
-else: # LOCAL (Lê do console)
+# --- 3. CORREÇÃO DO E-MAIL (Resend via Anymail) ---
+if not DEBUG: # PRODUÇÃO (Render)
+    INSTALLED_APPS += ['anymail']  # Garante que o anymail está ativo em produção
+    
+    EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+    ANYMAIL = {
+        "RESEND_API_KEY": os.environ.get('RESEND_API_KEY'),
+    }
+    # O e-mail de envio da Resend (inicialmente use o onboarding)
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', "onboarding@resend.dev")
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+else: # LOCAL
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'Chama do Cerrado <nao-responda@chamadocerrado.com.br>'
