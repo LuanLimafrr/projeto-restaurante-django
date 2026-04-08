@@ -1,141 +1,140 @@
 # Arquivo: reservas/views.py
-# CORRIGIDO: Argumentos 'id' e proteção de views do Gerente
-
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ReservaForm
 from .models import Reserva
-from django.contrib.auth.decorators import login_required, user_passes_test # Importa user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.db.models import Sum
 from django.utils import timezone
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
 import datetime
 from datetime import timedelta
-import requests 
 import os 
 
 # --- IMPORTAÇÕES DE PERMISSÃO ---
 from cardapio.views import is_gerente, is_staff_user 
 
-# --- FUNÇÃO DE EMAIL (USANDO API REQUESTS) ---
-def send_email_via_api(to_email, subject, html_content):
-    api_key = os.environ.get('SENDGRID_API_KEY') 
-    from_email = settings.DEFAULT_FROM_EMAIL 
-
-    if not api_key or not from_email:
-        print("ERRO CRÍTICO: SENDGRID_API_KEY ou DEFAULT_FROM_EMAIL não configurado.")
-        return False
-
-    data = {
-        "personalizations": [{"to": [{"email": to_email}]}],
-        "from": {"email": from_email, "name": "Chama do Cerrado"},
-        "subject": subject,
-        "content": [{"type": "text/html", "value": html_content}]
-    }
-    
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        print(f"DEBUG: Tentando enviar email para {to_email}...")
-        response = requests.post('https://api.sendgrid.com/v3/mail/send', headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 202:
-            print(f"DEBUG: Email enviado com Status: 202")
-            return True
-        else:
-            print(f"ERRO: SendGrid rejeitou email. Status: {response.status_code}, Detalhes: {response.text}")
-            return False
-    except requests.exceptions.RequestException as e:
-        print(f"ERRO: Falha de requisição para SendGrid: {e}")
-        return False
-
-# --- HELPER PARA ENVIAR EMAIL (MODIFICADO) ---
+# --- HELPER PARA ENVIAR EMAIL (VERSÃO RESEND/ANYMAIL) ---
 def enviar_email_status_reserva(request, reserva):
+    """
+    Envia e-mail de confirmação ou cancelamento usando Anymail + Resend.
+    """
     if not reserva.usuario or not reserva.usuario.email:
         print(f"DEBUG: Reserva {reserva.id} sem usuário ou email.")
         return
 
     status_map = {'CONFIRMADA': 'Confirmada', 'CANCELADA': 'Cancelada'}
     status_legivel = status_map.get(reserva.status)
+    
     if not status_legivel:
         return
 
     assunto = f"Sua reserva no Chama do Cerrado foi {status_legivel}!"
     contexto_email = {'reserva': reserva, 'status_legivel': status_legivel}
-    mensagem_html = render_to_string('emails/status_reserva.html', contexto_email) # Renderize HTML
-
+    
     try:
-        sucesso = send_email_via_api(
-            to_email=reserva.usuario.email,
+        # Renderiza o HTML do arquivo templates/emails/status_reserva.html
+        mensagem_html = render_to_string('emails/status_reserva.html', contexto_email)
+        texto_puro = strip_tags(mensagem_html)
+
+        email = EmailMultiAlternatives(
             subject=assunto,
-            html_content=mensagem_html
+            body=texto_puro,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[reserva.usuario.email]
         )
-        if sucesso:
-            print(f"DEBUG: Email status '{status_legivel}' enviado com sucesso para {reserva.usuario.email} via SendGrid API.")
-        else:
-            print(f"Erro: Falha no envio de email para {reserva.usuario.email} via SendGrid API.")
-            if request: messages.error(request, f"Erro ao enviar email para {reserva.usuario.email}.")
-
+        email.attach_alternative(mensagem_html, "text/html")
+        email.send()
+        print(f"DEBUG: Email enviado para {reserva.usuario.email} com sucesso.")
+        
     except Exception as e:
-        print(f"Exceção inesperada ao tentar enviar email para {reserva.usuario.email}: {e}")
-        if request: messages.error(request, f"Erro crítico ao enviar email para {reserva.usuario.email}.")
+        print(f"ERRO CRÍTICO ao enviar email: {e}")
+        if request:
+            messages.error(request, "O status foi alterado, mas o e-mail de notificação falhou.")
 
-# --- Views Cliente (fazer_reserva_modal, fazer_reserva - sem mudanças) ---
+# --- Views Cliente ---
+
 @login_required
 def fazer_reserva_modal(request):
-    if request.user.is_staff: messages.error(request, "Funcionários não podem fazer reservas."); return redirect('inicio')
+    if request.user.is_staff: 
+        messages.error(request, "Funcionários não podem fazer reservas.")
+        return redirect('inicio')
+        
     if request.method == 'POST':
         form = ReservaForm(request.POST)
         if form.is_valid():
-            data_reserva = form.cleaned_data['data']; hora_reserva = form.cleaned_data['hora']; novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            data_reserva = form.cleaned_data['data']
+            hora_reserva = form.cleaned_data['hora']
+            novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            
             reservas_existentes = Reserva.objects.filter(data=data_reserva, hora=hora_reserva, status__in=['PENDENTE', 'CONFIRMADA'])
             total_pessoas = reservas_existentes.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
             limite = settings.RESTAURANTE_CAPACIDADE_POR_HORARIO
+            
             if (total_pessoas + novas_pessoas) > limite:
-                vagas = limite - total_pessoas; messages.error(request, f"Horário lotado. Vagas: {vagas}.")
+                vagas = limite - total_pessoas
+                messages.error(request, f"Horário lotado. Vagas disponíveis: {vagas}.")
             else:
-                reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
-                messages.success(request, 'Solicitação enviada! Aguarde email.')
+                reserva = form.save(commit=False)
+                reserva.usuario = request.user
+                reserva.save()
+                messages.success(request, 'Solicitação enviada! Você receberá um e-mail em breve.')
                 return redirect('perfil') 
-        else: messages.error(request, f"Erro: {next(iter(form.errors.values()))[0] if form.errors else 'Verifique.'}")
+        else:
+            messages.error(request, f"Erro: {next(iter(form.errors.values()))[0] if form.errors else 'Verifique os dados.'}")
     return redirect('inicio')
 
 @login_required
 def fazer_reserva(request):
-    if request.user.is_staff: messages.error(request, "Funcionários não podem fazer reservas."); return redirect('inicio')
+    if request.user.is_staff: 
+        messages.error(request, "Funcionários não podem fazer reservas.")
+        return redirect('inicio')
+        
     if request.method == 'POST':
         form = ReservaForm(request.POST)
         if form.is_valid():
-            data_reserva = form.cleaned_data['data']; hora_reserva = form.cleaned_data['hora']; novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            data_reserva = form.cleaned_data['data']
+            hora_reserva = form.cleaned_data['hora']
+            novas_pessoas = form.cleaned_data['quantidade_pessoas']
+            
             reservas_existentes = Reserva.objects.filter(data=data_reserva, hora=hora_reserva, status__in=['PENDENTE', 'CONFIRMADA'])
             total_pessoas = reservas_existentes.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
             limite = settings.RESTAURANTE_CAPACIDADE_POR_HORARIO
+            
             if (total_pessoas + novas_pessoas) > limite:
-                vagas = limite - total_pessoas; form.add_error(None, f"Horário lotado. Vagas: {vagas}.")
+                vagas = limite - total_pessoas
+                form.add_error(None, f"Horário lotado. Vagas disponíveis: {vagas}.")
             else:
-                reserva = form.save(commit=False); reserva.usuario = request.user; reserva.save()
-                messages.success(request, 'Solicitação enviada! Aguarde email.')
+                reserva = form.save(commit=False)
+                reserva.usuario = request.user
+                reserva.save()
+                messages.success(request, 'Solicitação enviada! Você receberá um e-mail em breve.')
                 return redirect('perfil') 
-    else: form = ReservaForm()
+    else:
+        form = ReservaForm()
+        
     contexto = {'form': form}
     return render(request, 'reservas/fazer_reserva.html', contexto)
 
 
-# --- VIEW GERENCIAR RESERVAS (SÓ GERENTE) ---
+# --- Views Administrativas (SÓ GERENTE) ---
+
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio')
 def gerenciar_reservas(request):
-    if not request.user.is_staff: return redirect('inicio')
     hoje = timezone.now().date()
     data_selecionada_str = request.GET.get('data')
     data_selecionada = hoje
+    
     if data_selecionada_str:
-        try: data_selecionada = datetime.datetime.strptime(data_selecionada_str, '%Y-%m-%d').date()
-        except ValueError: messages.error(request, "Data inválida."); data_selecionada = hoje
+        try:
+            data_selecionada = datetime.datetime.strptime(data_selecionada_str, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, "Data inválida.")
+            data_selecionada = hoje
 
     weekdays_pt = {
         0: 'Segunda-feira', 1: 'Terça-feira', 2: 'Quarta-feira',
@@ -149,14 +148,13 @@ def gerenciar_reservas(request):
         reservas_no_dia = Reserva.objects.filter(data=dia, status__in=['PENDENTE', 'CONFIRMADA'])
         pessoas_no_dia = reservas_no_dia.aggregate(total=Sum('quantidade_pessoas'))['total'] or 0
         vagas_restantes = max(0, limite_total - pessoas_no_dia)
-        dia_da_semana_int = dia.weekday() 
         
         dias_com_vagas.append({
             'data': dia,
             'pessoas': pessoas_no_dia,
             'vagas': vagas_restantes,
             'limite': limite_total,
-            'dia_semana_pt': weekdays_pt[dia_da_semana_int] 
+            'dia_semana_pt': weekdays_pt[dia.weekday()] 
         })
 
     reservas_pendentes_dia = Reserva.objects.filter(status='PENDENTE', data=data_selecionada)
@@ -172,12 +170,9 @@ def gerenciar_reservas(request):
     }
     return render(request, 'reservas/gerenciar.html', contexto)
 
-
-# --- historico_reservas (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
+@user_passes_test(is_gerente, login_url='inicio')
 def historico_reservas(request):
-    if not request.user.is_staff: return redirect('inicio')
     hoje = timezone.now().date()
     reservas_canceladas = Reserva.objects.filter(status='CANCELADA')
     reservas_confirmadas_passadas = Reserva.objects.filter(status='CONFIRMADA', data__lt=hoje)
@@ -185,28 +180,26 @@ def historico_reservas(request):
     contexto = {'lista_historico': lista_historico}
     return render(request, 'reservas/historico.html', contexto)
 
-# --- confirmar_reserva (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
-def confirmar_reserva(request, id): # <-- CORRIGIDO AQUI (era reserva_id)
-    if not request.user.is_staff: return redirect('inicio')
-    reserva = get_object_or_404(Reserva, id=id) # <-- CORRIGIDO AQUI
+@user_passes_test(is_gerente, login_url='inicio')
+def confirmar_reserva(request, id):
+    reserva = get_object_or_404(Reserva, id=id)
     if reserva.status == 'PENDENTE':
-        reserva.status = 'CONFIRMADA'; reserva.save()
-        nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
+        reserva.status = 'CONFIRMADA'
+        reserva.save()
+        nome_cliente = reserva.usuario.get_full_name() if (reserva.usuario and reserva.usuario.get_full_name()) else reserva.usuario.username
         messages.success(request, f"Reserva de {nome_cliente} confirmada.")
         enviar_email_status_reserva(request, reserva)
     return redirect('gerenciar_reservas')
 
-# --- cancelar_reserva (SÓ GERENTE) ---
 @login_required
-@user_passes_test(is_gerente, login_url='inicio') # <-- SÓ GERENTE
-def cancelar_reserva(request, id): # <-- CORRIGIDO AQUI (era reserva_id)
-    if not request.user.is_staff: return redirect('inicio')
-    reserva = get_object_or_404(Reserva, id=id) # <-- CORRIGIDO AQUI
+@user_passes_test(is_gerente, login_url='inicio')
+def cancelar_reserva(request, id):
+    reserva = get_object_or_404(Reserva, id=id)
     if reserva.status != 'CANCELADA':
-        reserva.status = 'CANCELADA'; reserva.save()
-        nome_cliente = reserva.usuario.get_full_name() if reserva.usuario else 'Cliente'
+        reserva.status = 'CANCELADA'
+        reserva.save()
+        nome_cliente = reserva.usuario.get_full_name() if (reserva.usuario and reserva.usuario.get_full_name()) else reserva.usuario.username
         messages.warning(request, f"Reserva de {nome_cliente} cancelada.")
         enviar_email_status_reserva(request, reserva)
     return redirect('gerenciar_reservas')
