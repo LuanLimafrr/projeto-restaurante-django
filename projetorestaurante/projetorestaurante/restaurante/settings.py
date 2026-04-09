@@ -61,7 +61,12 @@ ROOT_URLCONF = 'restaurante.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # Corretamente aponta para 'projetorestaurante/templates'
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR.parent, 'templates'),
+            # Esse aqui de baixo é o "tiro de bazuca" para garantir no Render:
+            '/opt/render/project/src/projetorestaurante/projetorestaurante/templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
