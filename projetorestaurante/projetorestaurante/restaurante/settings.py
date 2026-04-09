@@ -1,31 +1,22 @@
 # /projetorestaurante/restaurante/settings.py
-# VERSÃO CORRIGIDA PARA PRODUÇÃO NO RENDER
+# VERSÃO FINAL CORRIGIDA PARA APRESENTAÇÃO - RENDER
 
 import os
 from pathlib import Path
-from decouple import config  # Importar 'config' do decouple
-import dj_database_url  # Importar 'dj_database_url'
+from decouple import config
+import dj_database_url
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-# Esta linha está CORRETA para sua estrutura (projetorestaurante/restaurante/settings.py)
+# Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# Lendo SECRET_KEY e DEBUG do arquivo .env ou das variáveis de ambiente do Render
+# --- CONFIGURAÇÕES BÁSICAS ---
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=True, cast=bool)
-
 
 # Ajustado para ler do .env ou do Render
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
 
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-
-# Application definition
-
+# --- APPLICATION DEFINITION ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,13 +32,13 @@ INSTALLED_APPS = [
     'comandas',
     'usuarios',
     'estoque',
-    'whitenoise.runserver_nostatic', # Adiciona whitenoise para servir estáticos (mesmo com DEBUG=True local, se necessário)
-    'anymail',
+    'whitenoise.runserver_nostatic',
+    # 'anymail' removido daqui para evitar duplicidade com o bloco 'if not DEBUG'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # <-- 1. CORREÇÃO DO CSS
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -62,12 +53,10 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            # 1. Caminho relativo ao BASE_DIR (onde está o manage.py)
-            BASE_DIR / 'templates', 
-            # 2. Caminho absoluto direto que o Render usa (conforme o erro que você enviou)
-            '/opt/render/project/src/projetorestaurante/projetorestaurante/templates',
-            # 3. Caminho via os.path para garantir compatibilidade
+            # Estratégia multi-caminho para não falhar no Render
             os.path.join(BASE_DIR, 'templates'),
+            BASE_DIR / 'templates',
+            '/opt/render/project/src/projetorestaurante/projetorestaurante/templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -85,12 +74,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'restaurante.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# --- 2. CORREÇÃO DO SUPERUSER (Banco de Dados) ---
-# Lê a variável DATABASE_URL do Render (ou do .env local)
+# --- BANCO DE DADOS ---
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL'),
@@ -98,10 +82,7 @@ DATABASES = {
     )
 }
 
-
-
-# Password validation
-# (Seu código original estava bom)
+# --- VALIDAÇÃO DE SENHA ---
 AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
     { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
@@ -109,53 +90,44 @@ AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
 ]
 
-
-# Internationalization
+# --- INTERNACIONALIZAÇÃO ---
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
+# --- ARQUIVOS ESTÁTICOS E MÍDIA ---
 STATIC_URL = 'static/'
-
-# Configuração de arquivos de Mídia (uploads dos usuários)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
 STATIC_ROOT = BASE_DIR.parent / 'staticfiles_coletados'
 
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-
-# --- 1. CORREÇÃO DO CSS (Armazenamento Whitenoise) ---
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
-
-
-# Outras Configurações
+# --- OUTRAS CONFIGURAÇÕES ---
 RESTAURANTE_CAPACIDADE_POR_HORARIO = 50
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'perfil'
 LOGOUT_REDIRECT_URL = 'inicio'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# --- 3. CORREÇÃO DO E-MAIL (Resend via Anymail) ---
-if not DEBUG: # PRODUÇÃO (Render)
-    INSTALLED_APPS += ['anymail']  # Garante que o anymail está ativo em produção
+# --- CONFIGURAÇÃO DE E-MAIL (PRODUÇÃO VS LOCAL) ---
+if not DEBUG:
+    # Em produção no Render
+    if 'anymail' not in INSTALLED_APPS:
+        INSTALLED_APPS += ['anymail']
     
     EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
     ANYMAIL = {
         "RESEND_API_KEY": os.environ.get('RESEND_API_KEY'),
     }
-    # O e-mail de envio da Resend (inicialmente use o onboarding)
     DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', "onboarding@resend.dev")
     SERVER_EMAIL = DEFAULT_FROM_EMAIL
-else: # LOCAL
+else:
+    # Localmente (DEBUG=True)
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'Chama do Cerrado <nao-responda@chamadocerrado.com.br>'
