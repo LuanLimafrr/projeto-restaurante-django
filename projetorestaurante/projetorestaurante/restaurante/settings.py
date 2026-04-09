@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Lendo SECRET_KEY e DEBUG do arquivo .env ou das variáveis de ambiente do Render
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 
 # Ajustado para ler do .env ou do Render
@@ -62,10 +62,12 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR.parent, 'templates'),
-            # Esse aqui de baixo é o "tiro de bazuca" para garantir no Render:
+            # 1. Caminho relativo ao BASE_DIR (onde está o manage.py)
+            BASE_DIR / 'templates', 
+            # 2. Caminho absoluto direto que o Render usa (conforme o erro que você enviou)
             '/opt/render/project/src/projetorestaurante/projetorestaurante/templates',
+            # 3. Caminho via os.path para garantir compatibilidade
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
